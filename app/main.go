@@ -23,16 +23,19 @@ func shell(w io.Writer, r io.Reader) error {
 	assert.NotNil(r)
 
 	reader := bufio.NewReader(r)
-	fmt.Fprint(w, "$ ")
 
-	input, err := reader.ReadBytes('\n')
+	for {
+		fmt.Fprint(w, "$ ")
+		input, err := reader.ReadBytes('\n')
+		if err != nil {
+			_, _ = fmt.Fprintf(w, "error reading input: %s\n", err)
+			return nil
+		}
+		input = bytes.TrimRight(input, "\r\n")
 
-	if err != nil {
-		_, _ = fmt.Fprintf(w, "error reading input: %s", err)
-		return nil
+		_, _ = fmt.Fprintf(w, "%s: command not found\n", input)
 	}
-	input = bytes.TrimRight(input, "\r\n")
 
-	_, _ = fmt.Fprintf(w, "%s: command not found", input)
+	// infinite program fine for now
 	return nil
 }
