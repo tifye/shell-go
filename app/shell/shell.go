@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/codecrafters-io/shell-starter-go/app/cmd"
 	"github.com/codecrafters-io/shell-starter-go/assert"
@@ -44,15 +45,20 @@ func (s *Shell) Run() error {
 			_, _ = fmt.Fprintf(s.Stdout, "error reading input: %s\n", err)
 			return nil
 		}
-		input = bytes.TrimRight(input, "\r\n")
 
-		cmd, found := s.findCommand(string(input))
+		input = bytes.TrimRight(input, "\r\n")
+		if len(input) == 0 {
+			continue
+		}
+
+		args := strings.Fields(string(input))
+		cmd, found := s.findCommand(args[0])
 		if !found {
 			_, _ = fmt.Fprintf(s.Stdout, "%s: command not found\n", input)
 			continue
 		}
 
-		if err = cmd.Run(input); err != nil {
+		if err = cmd.Run(args); err != nil {
 			if errors.Is(err, ErrExit) {
 				return nil
 			}

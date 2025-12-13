@@ -10,6 +10,7 @@ import (
 func main() {
 	shell := shell.NewShell(os.Stdout, os.Stdin)
 	shell.AddBuiltin(builtin.NewExitCommand(shell))
+	shell.AddBuiltin(builtin.NewEchoCommand(shell))
 	if err := shell.Run(); err != nil {
 		panic(err)
 	}
