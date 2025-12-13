@@ -127,7 +127,7 @@ func (s *Shell) LookupPathCommand(name string) (string, *cmd.Command, bool) {
 			cmd := &cmd.Command{
 				Name: name,
 				Run: func(args []string) error {
-					fmt.Fprint(s.Stdout, exePath)
+					fmt.Fprintf(s.Stdout, "%s\n", exePath)
 					return nil
 				},
 			}
@@ -149,7 +149,6 @@ func (s *Shell) lookupExecutableInDir(dir string, exeName string) (exePath strin
 	// todo: what to do with error?
 	err = fs.WalkDir(s.FS, dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			fmt.Fprint(s.Stdout, err)
 			return nil
 		}
 
