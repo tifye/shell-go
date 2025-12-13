@@ -30,20 +30,7 @@ type Shell struct {
 	builtins []*cmd.Command
 	Env      env
 	FS       fs.ReadDirFS
-}
-
-func NewShell(w io.Writer, r io.Reader, env env, fs fs.ReadDirFS) *Shell {
-	assert.NotNil(w)
-	assert.NotNil(r)
-	assert.NotNil(env)
-	assert.NotNil(fs)
-	return &Shell{
-		Stdout:   w,
-		Stdin:    r,
-		Env:      env,
-		FS:       fs,
-		builtins: make([]*cmd.Command, 0),
-	}
+	FullPath func(string) (string, error)
 }
 
 func (s *Shell) Run() error {
@@ -88,16 +75,27 @@ func (s *Shell) Run() error {
 	}
 }
 
-func (s *Shell) AddBuiltin(command *cmd.Command) {
-	assert.NotNil(command)
-	s.builtins = append(s.builtins, command)
+func (s *Shell) AddBuiltins(commands ...*cmd.Command) {
+	assert.NotNil(commands)
+
+	if s.builtins == nil {
+		s.builtins = make([]*cmd.Command, 0, len(commands))
+	}
+
+	for _, cmd := range commands {
+		// Ok, small loop
+		_, found := s.LookupBuiltinCommand(cmd.Name)
+		if !found {
+			s.builtins = append(s.builtins, cmd)
+		}
+	}
 }
 
 func (s *Shell) LookupBuiltinCommand(name string) (*cmd.Command, bool) {
 	assert.Assert(len(name) > 0)
 
 	for _, c := range s.builtins {
-		if c.Name == name {
+		if strings.EqualFold(c.Name, name) {
 			return c, true
 		}
 	}
@@ -106,6 +104,7 @@ func (s *Shell) LookupBuiltinCommand(name string) (*cmd.Command, bool) {
 
 func (s *Shell) LookupPathCommand(name string) (string, *cmd.Command, bool) {
 	assert.Assert(len(name) > 0)
+	assert.NotNil(s.Env)
 
 	path := s.Env.Get("PATH")
 	if len(path) == 0 {
@@ -113,7 +112,6 @@ func (s *Shell) LookupPathCommand(name string) (string, *cmd.Command, bool) {
 	}
 
 	paths := filepath.SplitList(path)
-
 	for _, p := range paths {
 		// todo: what to do with error?
 		if len(p) == 0 {
@@ -140,10 +138,9 @@ func (s *Shell) LookupPathCommand(name string) (string, *cmd.Command, bool) {
 
 func (s *Shell) lookupExecutableInDir(dir string, exeName string) (exePath string, found bool, err error) {
 	assert.Assert(len(dir) > 0)
+	assert.Assert(len(exeName) > 0)
 
-	if !fs.ValidPath(dir) {
-		return
-	}
+	dir, _ = s.FullPath(dir)
 
 	// todo: not optimal when reading large dirs
 	// todo: what to do with error?
@@ -167,7 +164,7 @@ func (s *Shell) lookupExecutableInDir(dir string, exeName string) (exePath strin
 		}
 
 		fi, _ := d.Info()
-		if fi.Mode().Perm()&0111 == 0 {
+		if hasExecPerms(fi.Mode().Perm()) {
 			exePath = path
 			found = true
 			return fs.SkipAll
