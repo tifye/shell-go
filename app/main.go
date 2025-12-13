@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	shell := shell.NewShell(os.Stdout, os.Stdin)
+	shell := shell.NewShell(os.Stdout, os.Stdin, goenv{}, gofs{})
 	shell.AddBuiltin(builtin.NewExitCommand(shell))
 	shell.AddBuiltin(builtin.NewEchoCommand(shell))
 	shell.AddBuiltin(builtin.NewTypeCommand(shell))

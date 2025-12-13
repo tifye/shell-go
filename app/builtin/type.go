@@ -5,6 +5,7 @@ import (
 
 	"github.com/codecrafters-io/shell-starter-go/app/cmd"
 	"github.com/codecrafters-io/shell-starter-go/app/shell"
+	"github.com/codecrafters-io/shell-starter-go/assert"
 )
 
 func NewTypeCommand(s *shell.Shell) *cmd.Command {
@@ -18,6 +19,13 @@ func NewTypeCommand(s *shell.Shell) *cmd.Command {
 			cmdName := args[1]
 			if _, found := s.LookupBuiltinCommand(cmdName); found {
 				_, _ = fmt.Fprintf(s.Stdout, "%s is a shell builtin\n", cmdName)
+				return nil
+			}
+
+			path, _, found := s.LookupPathCommand(cmdName)
+			if found {
+				assert.Assert(len(path) > 0)
+				_, _ = fmt.Fprintf(s.Stdout, "%s is %s\n", cmdName, path)
 				return nil
 			}
 

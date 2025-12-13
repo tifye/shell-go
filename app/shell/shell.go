@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
+	"path/filepath"
 	"strings"
 
 	"github.com/codecrafters-io/shell-starter-go/app/cmd"
@@ -18,16 +20,28 @@ var (
 	ErrExit = errors.New("shell exited")
 )
 
+type env interface {
+	Get(string) string
+}
+
 type Shell struct {
 	Stdout   io.Writer
 	Stdin    io.Reader
 	builtins []*cmd.Command
+	Env      env
+	FS       fs.ReadDirFS
 }
 
-func NewShell(w io.Writer, r io.Reader) *Shell {
+func NewShell(w io.Writer, r io.Reader, env env, fs fs.ReadDirFS) *Shell {
+	assert.NotNil(w)
+	assert.NotNil(r)
+	assert.NotNil(env)
+	assert.NotNil(fs)
 	return &Shell{
 		Stdout:   w,
 		Stdin:    r,
+		Env:      env,
+		FS:       fs,
 		builtins: make([]*cmd.Command, 0),
 	}
 }
@@ -53,12 +67,17 @@ func (s *Shell) Run() error {
 
 		args := strings.Fields(string(input))
 		cmdName := args[0]
-		cmd, found := s.LookupCommand(cmdName)
+		cmd, found, err := s.LookupCommand(cmdName)
+		if err != nil {
+			_, _ = fmt.Fprintf(s.Stdout, "error looking up command '%s': %s\n", cmdName, err)
+			continue
+		}
 		if !found {
 			_, _ = fmt.Fprintf(s.Stdout, "%s: command not found\n", cmdName)
 			continue
 		}
 
+		assert.NotNil(cmd)
 		if err = cmd.Run(args); err != nil {
 			if errors.Is(err, ErrExit) {
 				return nil
@@ -70,10 +89,13 @@ func (s *Shell) Run() error {
 }
 
 func (s *Shell) AddBuiltin(command *cmd.Command) {
+	assert.NotNil(command)
 	s.builtins = append(s.builtins, command)
 }
 
 func (s *Shell) LookupBuiltinCommand(name string) (*cmd.Command, bool) {
+	assert.Assert(len(name) > 0)
+
 	for _, c := range s.builtins {
 		if c.Name == name {
 			return c, true
@@ -82,22 +104,95 @@ func (s *Shell) LookupBuiltinCommand(name string) (*cmd.Command, bool) {
 	return nil, false
 }
 
-func (s *Shell) LookupPathCommand(_ string) (*cmd.Command, bool) {
-	return nil, false
+func (s *Shell) LookupPathCommand(name string) (string, *cmd.Command, bool) {
+	assert.Assert(len(name) > 0)
+
+	path := s.Env.Get("PATH")
+	if len(path) == 0 {
+		return "", nil, false
+	}
+
+	paths := filepath.SplitList(path)
+
+	for _, p := range paths {
+		// todo: what to do with error?
+		if len(p) == 0 {
+			continue
+		}
+		exePath, found, err := s.lookupExecutableInDir(p, name)
+		if err != nil {
+			return "", nil, false
+		}
+		if found {
+			cmd := &cmd.Command{
+				Name: name,
+				Run: func(args []string) error {
+					fmt.Fprint(s.Stdout, exePath)
+					return nil
+				},
+			}
+			return exePath, cmd, true
+		}
+	}
+
+	return "", nil, false
 }
 
-func (s *Shell) LookupCommand(name string) (*cmd.Command, bool) {
+func (s *Shell) lookupExecutableInDir(dir string, exeName string) (exePath string, found bool, err error) {
+	assert.Assert(len(dir) > 0)
+
+	if !fs.ValidPath(dir) {
+		return
+	}
+
+	// todo: not optimal when reading large dirs
+	// todo: what to do with error?
+	err = fs.WalkDir(s.FS, dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			fmt.Fprint(s.Stdout, err)
+			return nil
+		}
+
+		if path == dir {
+			return nil
+		}
+
+		if d.IsDir() {
+			return fs.SkipDir
+		}
+
+		fname := d.Name()
+		fname = strings.TrimSuffix(fname, filepath.Ext(fname))
+		if fname != exeName {
+			return nil
+		}
+
+		fi, _ := d.Info()
+		if fi.Mode().Perm()&0111 == 0 {
+			exePath = path
+			found = true
+			return fs.SkipAll
+		}
+
+		return nil
+	})
+
+	return exePath, found, err
+}
+
+func (s *Shell) LookupCommand(name string) (*cmd.Command, bool, error) {
+	assert.Assert(len(name) > 0)
+
 	cmd, found := s.LookupBuiltinCommand(name)
 	if found {
 		assert.NotNil(cmd)
-		return cmd, true
+		return cmd, true, nil
 	}
 
-	cmd, found = s.LookupPathCommand(name)
+	_, cmd, found = s.LookupPathCommand(name)
 	if found {
-		assert.NotNil(cmd)
-		return cmd, true
+		return cmd, true, nil
 	}
 
-	return nil, false
+	return nil, false, nil
 }
