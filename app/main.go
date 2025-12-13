@@ -1,41 +1,16 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
-	"fmt"
-	"io"
 	"os"
 
-	"github.com/codecrafters-io/shell-starter-go/assert"
+	"github.com/codecrafters-io/shell-starter-go/app/builtin"
+	"github.com/codecrafters-io/shell-starter-go/app/shell"
 )
 
 func main() {
-
-	err := shell(os.Stdout, os.Stdin)
-	if err != nil {
+	shell := shell.NewShell(os.Stdout, os.Stdin)
+	shell.AddBuiltin(builtin.NewExitCommand(shell))
+	if err := shell.Run(); err != nil {
 		panic(err)
 	}
-}
-
-func shell(w io.Writer, r io.Reader) error {
-	assert.NotNil(w)
-	assert.NotNil(r)
-
-	reader := bufio.NewReader(r)
-
-	for {
-		fmt.Fprint(w, "$ ")
-		input, err := reader.ReadBytes('\n')
-		if err != nil {
-			_, _ = fmt.Fprintf(w, "error reading input: %s\n", err)
-			return nil
-		}
-		input = bytes.TrimRight(input, "\r\n")
-
-		_, _ = fmt.Fprintf(w, "%s: command not found\n", input)
-	}
-
-	// infinite program fine for now
-	return nil
 }
