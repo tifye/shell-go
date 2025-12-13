@@ -52,9 +52,10 @@ func (s *Shell) Run() error {
 		}
 
 		args := strings.Fields(string(input))
-		cmd, found := s.findCommand(args[0])
+		cmdName := args[0]
+		cmd, found := s.LookupCommand(cmdName)
 		if !found {
-			_, _ = fmt.Fprintf(s.Stdout, "%s: command not found\n", input)
+			_, _ = fmt.Fprintf(s.Stdout, "%s: command not found\n", cmdName)
 			continue
 		}
 
@@ -63,7 +64,7 @@ func (s *Shell) Run() error {
 				return nil
 			}
 
-			_, _ = fmt.Fprintf(s.Stdout, "error executing '%s': %s", input, err)
+			_, _ = fmt.Fprintf(s.Stdout, "error executing '%s': %s\n", input, err)
 		}
 	}
 }
@@ -72,11 +73,31 @@ func (s *Shell) AddBuiltin(command *cmd.Command) {
 	s.builtins = append(s.builtins, command)
 }
 
-func (s *Shell) findCommand(name string) (*cmd.Command, bool) {
+func (s *Shell) LookupBuiltinCommand(name string) (*cmd.Command, bool) {
 	for _, c := range s.builtins {
 		if c.Name == name {
 			return c, true
 		}
 	}
+	return nil, false
+}
+
+func (s *Shell) LookupPathCommand(_ string) (*cmd.Command, bool) {
+	return nil, false
+}
+
+func (s *Shell) LookupCommand(name string) (*cmd.Command, bool) {
+	cmd, found := s.LookupBuiltinCommand(name)
+	if found {
+		assert.NotNil(cmd)
+		return cmd, true
+	}
+
+	cmd, found = s.LookupPathCommand(name)
+	if found {
+		assert.NotNil(cmd)
+		return cmd, true
+	}
+
 	return nil, false
 }
