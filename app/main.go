@@ -14,6 +14,7 @@ func main() {
 		Stdin:    os.Stdin,
 		Env:      goenv{},
 		FS:       gofs{},
+		Exec:     goexec,
 		FullPath: filepath.Abs,
 	}
 	shell.AddBuiltins(

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -30,6 +31,7 @@ type Shell struct {
 	builtins []*cmd.Command
 	Env      env
 	FS       fs.ReadDirFS
+	Exec     func(s *Shell, path string, args []string) error
 	FullPath func(string) (string, error)
 }
 
@@ -105,6 +107,7 @@ func (s *Shell) LookupBuiltinCommand(name string) (*cmd.Command, bool) {
 func (s *Shell) LookupPathCommand(name string) (string, *cmd.Command, bool) {
 	assert.Assert(len(name) > 0)
 	assert.NotNil(s.Env)
+	assert.NotNil(s.Exec)
 
 	path := s.Env.Get("PATH")
 	if len(path) == 0 {
@@ -122,7 +125,12 @@ func (s *Shell) LookupPathCommand(name string) (string, *cmd.Command, bool) {
 			return "", nil, false
 		}
 		if found {
-			cmd := newExecCommand(s, name, exePath)
+			cmd := &cmd.Command{
+				Name: name,
+				Run: func(args []string) error {
+					return s.Exec(s, exePath, args)
+				},
+			}
 			return exePath, cmd, true
 		}
 	}
@@ -185,4 +193,20 @@ func (s *Shell) LookupCommand(name string) (*cmd.Command, bool, error) {
 	}
 
 	return nil, false, nil
+}
+
+func newExecCommand(s *Shell, name, path string) *cmd.Command {
+	return &cmd.Command{
+		Name: name,
+		Run: func(args []string) error {
+			ecmd := &exec.Cmd{
+				Path: path,
+				Args: args,
+			}
+			ecmd.Stdin = s.Stdin
+			ecmd.Stdout = s.Stdout
+			ecmd.Stderr = s.Stdout
+			return ecmd.Run()
+		},
+	}
 }
