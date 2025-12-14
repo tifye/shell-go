@@ -122,13 +122,7 @@ func (s *Shell) LookupPathCommand(name string) (string, *cmd.Command, bool) {
 			return "", nil, false
 		}
 		if found {
-			cmd := &cmd.Command{
-				Name: name,
-				Run: func(args []string) error {
-					fmt.Fprintf(s.Stdout, "%s\n", exePath)
-					return nil
-				},
-			}
+			cmd := newExecCommand(s, name, exePath)
 			return exePath, cmd, true
 		}
 	}
