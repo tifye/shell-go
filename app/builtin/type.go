@@ -9,9 +9,12 @@ import (
 )
 
 func NewTypeCommand(s *shell.Shell) *cmd.Command {
+	assert.NotNil(s)
 	return &cmd.Command{
 		Name: "type",
 		Run: func(args []string) error {
+			assert.Assert(len(args) > 0)
+
 			if len(args) != 2 {
 				return fmt.Errorf("expected exactly one argument to the 'type' command")
 			}
