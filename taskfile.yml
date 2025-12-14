@@ -1,0 +1,10 @@
+version: '3'
+
+tasks:
+  build-shigure:
+    dir: ./shigure/
+    cmds:
+      - go build -o ./build/main.wasm
+    env:
+      GOOS: js
+      GOARCH: wasm
