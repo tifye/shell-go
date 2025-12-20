@@ -43,18 +43,15 @@ func (s *Shell) Run() error {
 
 	for {
 		fmt.Fprint(s.Stdout, "$ ")
-		input, err := reader.ReadBytes('\n')
+		args, err := parseInput(reader)
 		if err != nil {
 			_, _ = fmt.Fprintf(s.Stdout, "error reading input: %s\n", err)
 			return nil
 		}
-
-		input = bytes.TrimRight(input, "\r\n")
-		if len(input) == 0 {
+		if len(args) == 0 {
 			continue
 		}
 
-		args := strings.Fields(string(input))
 		cmdName := args[0]
 		cmd, found, err := s.LookupCommand(cmdName)
 		if err != nil {
@@ -72,9 +69,25 @@ func (s *Shell) Run() error {
 				return nil
 			}
 
-			_, _ = fmt.Fprintf(s.Stdout, "error executing '%s': %s\n", input, err)
+			_, _ = fmt.Fprintf(s.Stdout, "error executing '%s': %s\n", strings.Join(args, " "), err)
 		}
 	}
+}
+
+func parseInput(reader *bufio.Reader) (args []string, err error) {
+
+	input, err := reader.ReadBytes('\n')
+	if err != nil {
+		return nil, err
+	}
+
+	input = bytes.TrimRight(input, "\r\n")
+	if len(input) == 0 {
+		return nil, nil
+	}
+
+	args = strings.Fields(string(input))
+	return args, nil
 }
 
 func (s *Shell) AddBuiltins(commands ...*cmd.Command) {

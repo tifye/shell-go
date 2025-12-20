@@ -4,7 +4,7 @@ tasks:
   build-shigure:
     dir: ./shigure/
     cmds:
-      - go build -o ./build/main.wasm
+      - go build -o ./build/shell.wasm
     env:
       GOOS: js
       GOARCH: wasm

@@ -1,10 +1,9 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"io"
-	"io/fs"
+	"os"
 	"syscall/js"
 
 	"github.com/codecrafters-io/shell-starter-go/app/builtin"
@@ -13,7 +12,15 @@ import (
 
 func main() {
 	pr, pw := io.Pipe()
-	js.Global().Set("write", js.FuncOf(func(this js.Value, args []js.Value) any {
+	jsshell := js.Global().Get("goshell")
+	if jsshell.IsUndefined() {
+		panic("goshell is undefined")
+	}
+	imports := jsshell.Get("imports")
+	if imports.IsUndefined() {
+		panic("goshell.imports is undefined")
+	}
+	imports.Set("write", js.FuncOf(func(this js.Value, args []js.Value) any {
 		if len(args) <= 0 {
 			return nil
 		}
@@ -23,9 +30,11 @@ func main() {
 		return nil
 	}))
 
+	exports := jsshell.Get("exports")
+
 	s := &shell.Shell{
 		Stdout: writeFunc(func(b []byte) (int, error) {
-			_ = js.Global().Call("output", string(b))
+			_ = exports.Call("output", string(b))
 			return len(b), nil
 		}),
 		Stdin:    pr,
@@ -59,17 +68,7 @@ func (_ stdoutWriter) Write(b []byte) (int, error) {
 type env struct{}
 
 func (e env) Get(key string) string {
-	return ""
-}
-
-type filesystem struct{}
-
-func (_ filesystem) Open(name string) (fs.File, error) {
-	return nil, errors.New("not implemented")
-}
-
-func (_ filesystem) ReadDir(name string) ([]fs.DirEntry, error) {
-	return nil, nil
+	return os.Getenv(key)
 }
 
 func exec(s *shell.Shell, path string, args []string) error {
