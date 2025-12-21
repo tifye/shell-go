@@ -2,7 +2,6 @@ package shell
 
 import (
 	"bufio"
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -43,7 +42,9 @@ func (s *Shell) Run() error {
 
 	for {
 		fmt.Fprint(s.Stdout, "$ ")
-		args, err := parseInput(reader)
+
+		input, err := reader.ReadString('\n')
+		args, err := parseInput(input)
 		if err != nil {
 			_, _ = fmt.Fprintf(s.Stdout, "error reading input: %s\n", err)
 			return nil
@@ -74,21 +75,21 @@ func (s *Shell) Run() error {
 	}
 }
 
-func parseInput(reader *bufio.Reader) (args []string, err error) {
+// func parseInput(reader *bufio.Reader) (args []string, err error) {
 
-	input, err := reader.ReadBytes('\n')
-	if err != nil {
-		return nil, err
-	}
+// 	input, err := reader.ReadBytes('\n')
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	input = bytes.TrimRight(input, "\r\n")
-	if len(input) == 0 {
-		return nil, nil
-	}
+// 	input = bytes.TrimRight(input, "\r\n")
+// 	if len(input) == 0 {
+// 		return nil, nil
+// 	}
 
-	args = strings.Fields(string(input))
-	return args, nil
-}
+// 	args = strings.Fields(string(input))
+// 	return args, nil
+// }
 
 func (s *Shell) AddBuiltins(commands ...*cmd.Command) {
 	assert.NotNil(commands)
