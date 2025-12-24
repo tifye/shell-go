@@ -29,6 +29,22 @@ func TestParseSingleCommands(t *testing.T) {
 			input:        "one''two",
 			expectedArgs: []string{"onetwo"},
 		},
+		{
+			input:        `"one   two"`,
+			expectedArgs: []string{"onetwo"},
+		},
+		{
+			input:        `"one""two"`,
+			expectedArgs: []string{"onetwo"},
+		},
+		{
+			input:        `"one" "two"`,
+			expectedArgs: []string{"one", "two"},
+		},
+		{
+			input:        `"one's two"`,
+			expectedArgs: []string{"one's two"},
+		},
 	}
 
 	for _, test := range tt {

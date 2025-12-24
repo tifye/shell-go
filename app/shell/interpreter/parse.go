@@ -114,6 +114,8 @@ func (p *parser) parseCommand() *command {
 		cmdName = p.parseText().literal
 	case tokenSingleQuote:
 		cmdName = p.parseSingleQuotes().literal
+	case tokenDoubleQuote:
+		cmdName = p.parseDoubleQuotes().literal
 	default:
 		return nil
 	}
@@ -130,13 +132,22 @@ func (p *parser) parseCommand() *command {
 	pc.cmd = cmd
 
 	for {
-		switch {
-		case p.isPeekToken(tokenText):
+		switch p.peekToken.typ {
+		case tokenText, tokenSpace:
 			p.nextToken()
-			pc.args = append(pc.args, p.parseText())
-		case p.isPeekToken(tokenSingleQuote):
+			node := p.parseText()
+			if len(node.literal) > 0 {
+				pc.args = append(pc.args, node)
+			}
+		case tokenSingleQuote:
 			p.nextToken()
 			node := p.parseSingleQuotes()
+			if len(node.literal) > 0 {
+				pc.args = append(pc.args, node)
+			}
+		case tokenDoubleQuote:
+			p.nextToken()
+			node := p.parseDoubleQuotes()
 			if len(node.literal) > 0 {
 				pc.args = append(pc.args, node)
 			}
@@ -149,16 +160,23 @@ func (p *parser) parseCommand() *command {
 func (p *parser) parseText() *rawText {
 	str := ""
 	for {
-		switch {
-		case p.isCurToken(tokenSpace):
+		switch p.curToken.typ {
+		case tokenSpace:
 			if len(str) > 0 {
 				return &rawText{literal: str}
 			}
-		case p.isCurToken(tokenText):
+			p.nextToken()
+		case tokenText:
 			str += p.curToken.literal
 			p.nextToken()
-		case p.isCurToken(tokenSingleQuote):
+		case tokenSingleQuote:
 			if !p.isPeekToken(tokenSingleQuote) {
+				return &rawText{literal: str}
+			}
+			p.nextToken()
+			p.nextToken()
+		case tokenDoubleQuote:
+			if !p.isPeekToken(tokenDoubleQuote) {
 				return &rawText{literal: str}
 			}
 			p.nextToken()
@@ -185,6 +203,33 @@ Loop:
 			p.nextToken()
 			if p.tryPeek(tokenSingleQuote) {
 				_, _ = builder.WriteString(p.parseSingleQuotes().literal)
+			}
+			break Loop
+		default:
+			break Loop
+		}
+	}
+
+	node.literal = builder.String()
+	return node
+}
+
+func (p *parser) parseDoubleQuotes() *doubleQuotedText {
+	assert.Assert(p.isCurToken(tokenDoubleQuote))
+
+	node := &doubleQuotedText{}
+	builder := strings.Builder{}
+
+Loop:
+	for {
+		switch {
+		case p.isPeekToken(tokenText):
+			p.nextToken()
+			_, _ = builder.WriteString(p.curToken.literal)
+		case p.isPeekToken(tokenDoubleQuote):
+			p.nextToken()
+			if p.tryPeek(tokenDoubleQuote) {
+				_, _ = builder.WriteString(p.parseDoubleQuotes().literal)
 			}
 			break Loop
 		default:

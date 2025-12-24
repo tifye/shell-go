@@ -157,7 +157,11 @@ func lexText(l *lexer) stateFunc {
 			}
 			return lexSingleQuotes
 		case r == '"':
-			return nil
+			l.backup()
+			if l.pos > l.start {
+				l.emit(tokenText)
+			}
+			return lexDoubleQuotes
 		case r == eof:
 			if l.pos > l.start {
 				l.emit(tokenText)
@@ -185,6 +189,28 @@ func lexSingleQuotes(l *lexer) stateFunc {
 			return lexText
 		case eof:
 			return l.errorf("unclosed single quotes")
+		default:
+		}
+	}
+}
+
+func lexDoubleQuotes(l *lexer) stateFunc {
+	assert.Assert(l.accept(`"`))
+
+	l.emit(tokenDoubleQuote)
+
+	for {
+		switch l.next() {
+		case '"':
+			l.backup()
+			if l.pos > l.start {
+				l.emit(tokenText)
+			}
+			l.next()
+			l.emit(tokenDoubleQuote)
+			return lexText
+		case eof:
+			return l.errorf("unclosed double quotes")
 		default:
 		}
 	}

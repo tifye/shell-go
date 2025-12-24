@@ -36,6 +36,10 @@ type (
 	singleQuotedText struct {
 		literal string
 	}
+
+	doubleQuotedText struct {
+		literal string
+	}
 )
 
 func (c command) Args() ([]string, error) {
@@ -59,5 +63,8 @@ func (t rawText) String() (string, error) {
 	return t.literal, nil
 }
 func (t singleQuotedText) String() (string, error) {
+	return t.literal, nil
+}
+func (t doubleQuotedText) String() (string, error) {
 	return t.literal, nil
 }

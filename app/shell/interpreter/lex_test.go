@@ -62,6 +62,49 @@ func TestNextToken(t *testing.T) {
 				{tokenEOF, "", -1},
 			},
 		},
+		{
+			input: `"one   two"`,
+			output: []token{
+				{tokenDoubleQuote, `"`, -1},
+				{tokenText, "one   two", -1},
+				{tokenDoubleQuote, `"`, -1},
+				{tokenEOF, "", -1},
+			},
+		},
+		{
+			input: `"one""two"`,
+			output: []token{
+				{tokenDoubleQuote, `"`, -1},
+				{tokenText, "one", -1},
+				{tokenDoubleQuote, `"`, -1},
+				{tokenDoubleQuote, `"`, -1},
+				{tokenText, "two", -1},
+				{tokenDoubleQuote, `"`, -1},
+				{tokenEOF, "", -1},
+			},
+		},
+		{
+			input: `"one" "two"`,
+			output: []token{
+				{tokenDoubleQuote, `"`, -1},
+				{tokenText, "one", -1},
+				{tokenDoubleQuote, `"`, -1},
+				{tokenSpace, ` `, -1},
+				{tokenDoubleQuote, `"`, -1},
+				{tokenText, "two", -1},
+				{tokenDoubleQuote, `"`, -1},
+				{tokenEOF, "", -1},
+			},
+		},
+		{
+			input: `"one's two"`,
+			output: []token{
+				{tokenDoubleQuote, `"`, -1},
+				{tokenText, `one's two`, -1},
+				{tokenDoubleQuote, `"`, -1},
+				{tokenEOF, "", -1},
+			},
+		},
 	}
 
 	for _, test := range tt {
