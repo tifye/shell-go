@@ -134,40 +134,54 @@ func (l *lexer) skipWhitespace() {
 	l.discard()
 }
 
+func (l *lexer) emitText() {
+	if l.pos > l.start {
+		l.emit(tokenText)
+	}
+}
+
+func (l *lexer) escaped() {
+	if !l.accept("\\") {
+		l.emit(tokenError)
+		return
+	}
+
+	l.discard()
+	_ = l.next()
+	l.emit(tokenEscaped)
+}
+
 func isSpace(r rune) bool {
 	return r == ' ' || r == '\n' || r == '\t' || r == '\r'
 }
 
 func lexText(l *lexer) stateFunc {
+
 	for {
-		switch r := l.next(); {
+		switch r := l.peek(); {
 		case isSpace(r):
-			l.backup()
-			if l.pos > l.start {
-				l.emit(tokenText)
-			}
+			l.emitText()
 			_ = l.accept(spaceChars)
 			l.emit(tokenSpace)
 			l.skipWhitespace()
 			return lexText
 		case r == '\'':
-			l.backup()
-			if l.pos > l.start {
-				l.emit(tokenText)
-			}
+			l.emitText()
 			return lexSingleQuotes
 		case r == '"':
-			l.backup()
-			if l.pos > l.start {
-				l.emit(tokenText)
-			}
+			l.emitText()
 			return lexDoubleQuotes
+		case r == '\\':
+			l.emitText()
+			l.escaped()
+			return lexText
 		case r == eof:
-			if l.pos > l.start {
-				l.emit(tokenText)
-			}
+			_ = l.next()
+			l.emitText()
 			l.emit(tokenEOF)
 			return nil
+		default:
+			_ = l.next()
 		}
 	}
 }

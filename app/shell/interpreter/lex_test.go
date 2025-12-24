@@ -105,6 +105,54 @@ func TestNextToken(t *testing.T) {
 				{tokenEOF, "", -1},
 			},
 		},
+		{
+			input: `three\ \ \ spaces`,
+			output: []token{
+				{tokenText, "three", -1},
+				{tokenEscaped, " ", -1},
+				{tokenEscaped, " ", -1},
+				{tokenEscaped, " ", -1},
+				{tokenText, "spaces", -1},
+				{tokenEOF, "", -1},
+			},
+		},
+		{
+			input: `one\   two`,
+			output: []token{
+				{tokenText, "one", -1},
+				{tokenEscaped, " ", -1},
+				{tokenSpace, " ", -1},
+				{tokenText, "two", -1},
+				{tokenEOF, "", -1},
+			},
+		},
+		{
+			input: `one\ntwo`,
+			output: []token{
+				{tokenText, "one", -1},
+				{tokenEscaped, "n", -1},
+				{tokenText, "two", -1},
+				{tokenEOF, "", -1},
+			},
+		},
+		{
+			input: `one\\two`,
+			output: []token{
+				{tokenText, "one", -1},
+				{tokenEscaped, `\`, -1},
+				{tokenText, "two", -1},
+				{tokenEOF, "", -1},
+			},
+		},
+		{
+			input: `\'one\'`,
+			output: []token{
+				{tokenEscaped, "'", -1},
+				{tokenText, "one", -1},
+				{tokenEscaped, "'", -1},
+				{tokenEOF, "", -1},
+			},
+		},
 	}
 
 	for _, test := range tt {

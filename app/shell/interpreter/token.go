@@ -13,6 +13,7 @@ const (
 	tokenText
 	tokenSingleQuote
 	tokenDoubleQuote
+	tokenEscaped
 )
 
 type token struct {

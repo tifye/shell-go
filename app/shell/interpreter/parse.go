@@ -182,6 +182,9 @@ func (p *parser) parseText() *rawText {
 			}
 			p.nextToken()
 			p.nextToken()
+		case tokenEscaped:
+			str += p.curToken.literal
+			p.nextToken()
 		default:
 			return &rawText{literal: str}
 		}
