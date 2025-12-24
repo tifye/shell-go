@@ -9,15 +9,15 @@ import (
 	"github.com/codecrafters-io/shell-starter-go/assert"
 )
 
+var (
+	ErrCommandNotFound = errors.New("command not found")
+)
+
 func Parse(input string, cmdLookup CommandLookuper) (*Program, error) {
 	l := newLexer(input)
 	p := newParser(l, cmdLookup)
 	prog := p.parse()
-	if len(p.errors) > 0 {
-		err := errors.Join(p.errors...)
-		return nil, fmt.Errorf("failed to parse with one or more errors: %w", err)
-	}
-	return prog, nil
+	return prog, p.err
 }
 
 type CommandLookuper interface {
@@ -29,13 +29,12 @@ type parser struct {
 	curToken  token
 	peekToken token
 	cmdLookup CommandLookuper
-	errors    []error
+	err       error
 }
 
 func newParser(l *lexer, cmdLookup CommandLookuper) *parser {
 	p := &parser{
 		l:         l,
-		errors:    []error{},
 		cmdLookup: cmdLookup,
 	}
 	p.nextToken()
@@ -94,13 +93,15 @@ func (p *parser) expectPeek(t tokenType) bool {
 }
 
 func (p *parser) peekError(t tokenType) {
-	err := fmt.Errorf("expected next token to be %d, got %d instead", t, p.peekToken.typ)
-	p.errors = append(p.errors, err)
+	p.error(fmt.Errorf("expected next token to be %d, got %d instead", t, p.peekToken.typ))
 }
 
 func (p *parser) errorf(format string, v ...any) {
-	err := fmt.Errorf(format, v...)
-	p.errors = append(p.errors, err)
+	p.error(fmt.Errorf(format, v...))
+}
+
+func (p *parser) error(err error) {
+	p.err = err
 }
 
 func (p *parser) parseCommand() *command {
@@ -126,7 +127,7 @@ func (p *parser) parseCommand() *command {
 		return nil
 	}
 	if !found {
-		p.errorf("could not find cmd %s", cmdName)
+		p.error(fmt.Errorf("%s: %w", cmdName, ErrCommandNotFound))
 		return nil
 	}
 	pc.cmd = cmd
