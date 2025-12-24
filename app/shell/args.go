@@ -13,9 +13,9 @@ const (
 	quotes     string = `"'`
 )
 
-type stateFunc func(*parser) stateFunc
+type stateFunc func(*lexer) stateFunc
 
-type parser struct {
+type lexer struct {
 	state stateFunc
 	input string
 	err   error
@@ -28,13 +28,11 @@ type parser struct {
 }
 
 func parseInput(input string) ([]string, error) {
-	assert.Assert(len(input) < 1_000_000)
-
 	if len(input) == 0 {
 		return nil, nil
 	}
 
-	p := &parser{
+	p := &lexer{
 		state: parseText,
 		input: input,
 		args:  []string{},
@@ -46,7 +44,7 @@ func parseInput(input string) ([]string, error) {
 }
 
 // next advances the parser one rune
-func (p *parser) next() rune {
+func (p *lexer) next() rune {
 	if p.pos >= len(p.input) {
 		return eof
 	}
@@ -58,18 +56,14 @@ func (p *parser) next() rune {
 }
 
 // backup moves the parser back the width of the latest rune
-func (p *parser) backup() {
+func (p *lexer) backup() {
 	p.pos -= p.width
 	assert.Assert(p.pos >= 0)
 }
 
 // accept advances the parser one rune if the next rune is contained
 // in the valid string passed. Checked by strings.ContainsRune
-func (p *parser) accept(valid string) bool {
-	if p.pos == len(p.input) {
-		return false
-	}
-
+func (p *lexer) accept(valid string) bool {
 	if strings.ContainsRune(valid, p.next()) {
 		return true
 	}
@@ -79,7 +73,7 @@ func (p *parser) accept(valid string) bool {
 
 // acceptRun behaves like accept but continues advancing the parser
 // untill no matches are found
-func (p *parser) acceptRun(valid string) {
+func (p *lexer) acceptRun(valid string) {
 	next := p.next()
 	for {
 		if !strings.ContainsRune(valid, next) {
@@ -97,7 +91,7 @@ func (p *parser) acceptRun(valid string) {
 
 // runUntil advances the parser until it encounters a rune contained in valid.
 // parser stops just before the matched rune
-func (p *parser) runUntil(valid string) {
+func (p *lexer) runUntil(valid string) {
 	next := p.next()
 	for {
 		if strings.ContainsRune(valid, next) {
@@ -115,12 +109,12 @@ func (p *parser) runUntil(valid string) {
 
 // discard sets the starting position to the current position
 // of the parser effectively discard any input inbetween
-func (p *parser) discard() {
+func (p *lexer) discard() {
 	p.start = p.pos
 }
 
 // skipWhitespace skips past any whitespace defined by ' ', '\t', '\n', and '\r'
-func (p *parser) skipWhitespace() {
+func (p *lexer) skipWhitespace() {
 	r := p.next()
 	for r == ' ' || r == '\t' || r == '\n' || r == '\r' {
 		r = p.next()
@@ -134,95 +128,12 @@ func (p *parser) skipWhitespace() {
 }
 
 // peak returns the next rune in input without advancing the parser
-func (p *parser) peak() rune {
-	if p.pos == len(p.input) {
-		return eof
-	}
-
+func (p *lexer) peak() rune {
 	r := p.next()
 	p.backup()
 	return r
 }
 
-// addArg adds an arguments to the end of the args list. Noops on empty args
-func (p *parser) addArg(arg string) {
-	assert.NotNil(p.args)
-
-	if len(arg) == 0 {
-		return
-	}
-
-	p.args = append(p.args, arg)
-}
-
-// current returns the substring of input that is between the start and position of the parser.
-// Returns empty string if start and position are the same
-func (p *parser) current() string {
-	if p.start == p.pos {
-		return ""
-	}
-	cur := p.input[p.start:p.pos]
-	p.start = p.pos
-	return cur
-}
-
-func parseText(p *parser) stateFunc {
-	assert.NotNil(p)
-
-	p.skipWhitespace()
-	current := ""
-	for {
-		p.runUntil(whitespace + quotes)
-		current += p.current()
-
-		if !p.accept(quotes) {
-			break
-		}
-
-		if p.accept(quotes) {
-			p.discard()
-			continue
-		} else {
-			p.backup()
-			p.addArg(current)
-			return parseQuoted
-		}
-	}
-
-	p.addArg(current)
-
-	if p.peak() == eof {
-		return nil
-	}
-
-	return parseText
-}
-
-func parseQuoted(p *parser) stateFunc {
-	assert.NotNil(p)
-
-	assert.Assert(p.accept(quotes))
-	p.discard()
-
-	current := ""
-	for {
-		p.runUntil(quotes)
-		current += p.current()
-
-		assert.Assert(p.accept(quotes))
-		p.discard()
-
-		if !p.accept(quotes) {
-			break
-		}
-		p.discard()
-	}
-
-	p.addArg(current)
-
-	if p.peak() == eof {
-		return nil
-	}
-
-	return parseText
+func parseText(p *lexer) stateFunc {
+	return nil
 }

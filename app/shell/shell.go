@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/codecrafters-io/shell-starter-go/app/cmd"
+	"github.com/codecrafters-io/shell-starter-go/app/shell/interpreter"
 	"github.com/codecrafters-io/shell-starter-go/assert"
 )
 
@@ -44,34 +45,51 @@ func (s *Shell) Run() error {
 		fmt.Fprint(s.Stdout, "$ ")
 
 		input, err := reader.ReadString('\n')
-		args, err := parseInput(input)
 		if err != nil {
 			_, _ = fmt.Fprintf(s.Stdout, "error reading input: %s\n", err)
 			return nil
 		}
-		if len(args) == 0 {
-			continue
-		}
 
-		cmdName := args[0]
-		cmd, found, err := s.LookupCommand(cmdName)
+		prog, err := interpreter.Parse(input, s)
 		if err != nil {
-			_, _ = fmt.Fprintf(s.Stdout, "error looking up command '%s': %s\n", cmdName, err)
-			continue
-		}
-		if !found {
-			_, _ = fmt.Fprintf(s.Stdout, "%s: command not found\n", cmdName)
+			_, _ = fmt.Fprintf(s.Stdout, "error parsing input: %s\n", err)
 			continue
 		}
 
-		assert.NotNil(cmd)
-		if err = cmd.Run(args); err != nil {
+		if err := prog.Run(); err != nil {
 			if errors.Is(err, ErrExit) {
 				return nil
 			}
-
-			_, _ = fmt.Fprintf(s.Stdout, "error executing '%s': %s\n", strings.Join(args, " "), err)
+			_, _ = fmt.Fprintf(s.Stdout, "error executing: %s\n", err)
 		}
+		// args, err := parseInput(input)
+		// if err != nil {
+		// 	_, _ = fmt.Fprintf(s.Stdout, "error reading input: %s\n", err)
+		// 	return nil
+		// }
+		// if len(args) == 0 {
+		// 	continue
+		// }
+
+		// cmdName := args[0]
+		// cmd, found, err := s.LookupCommand(cmdName)
+		// if err != nil {
+		// 	_, _ = fmt.Fprintf(s.Stdout, "error looking up command '%s': %s\n", cmdName, err)
+		// 	continue
+		// }
+		// if !found {
+		// 	_, _ = fmt.Fprintf(s.Stdout, "%s: command not found\n", cmdName)
+		// 	continue
+		// }
+
+		// assert.NotNil(cmd)
+		// if err = cmd.Run(args); err != nil {
+		// 	if errors.Is(err, ErrExit) {
+		// 		return nil
+		// 	}
+
+		// 	_, _ = fmt.Fprintf(s.Stdout, "error executing '%s': %s\n", strings.Join(args, " "), err)
+		// }
 	}
 }
 
