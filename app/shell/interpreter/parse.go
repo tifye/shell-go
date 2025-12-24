@@ -134,7 +134,7 @@ func (p *parser) parseCommand() *command {
 
 	for {
 		switch p.peekToken.typ {
-		case tokenText, tokenSpace:
+		case tokenText, tokenSpace, tokenEscaped:
 			p.nextToken()
 			node := p.parseText()
 			if len(node.literal) > 0 {
