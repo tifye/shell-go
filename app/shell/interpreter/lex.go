@@ -156,7 +156,6 @@ func isSpace(r rune) bool {
 }
 
 func lexText(l *lexer) stateFunc {
-
 	for {
 		switch r := l.peek(); {
 		case isSpace(r):
@@ -170,7 +169,9 @@ func lexText(l *lexer) stateFunc {
 			return lexSingleQuotes
 		case r == '"':
 			l.emitText()
-			return lexDoubleQuotes
+			_ = l.next()
+			l.emit(tokenDoubleQuote)
+			return lexInsideDoubleQuotes
 		case r == '\\':
 			l.emitText()
 			l.escaped()
@@ -192,9 +193,8 @@ func lexSingleQuotes(l *lexer) stateFunc {
 	l.emit(tokenSingleQuote)
 
 	for {
-		switch l.next() {
+		switch l.peek() {
 		case '\'':
-			l.backup()
 			if l.pos > l.start {
 				l.emit(tokenText)
 			}
@@ -204,28 +204,27 @@ func lexSingleQuotes(l *lexer) stateFunc {
 		case eof:
 			return l.errorf("unclosed single quotes")
 		default:
+			l.next()
 		}
 	}
 }
 
-func lexDoubleQuotes(l *lexer) stateFunc {
-	assert.Assert(l.accept(`"`))
-
-	l.emit(tokenDoubleQuote)
-
+func lexInsideDoubleQuotes(l *lexer) stateFunc {
 	for {
-		switch l.next() {
+		switch l.peek() {
 		case '"':
-			l.backup()
-			if l.pos > l.start {
-				l.emit(tokenText)
-			}
-			l.next()
+			l.emitText()
+			_ = l.next()
 			l.emit(tokenDoubleQuote)
 			return lexText
+		case '\\':
+			l.emitText()
+			l.escaped()
+			return lexInsideDoubleQuotes
 		case eof:
 			return l.errorf("unclosed double quotes")
 		default:
+			l.next()
 		}
 	}
 }

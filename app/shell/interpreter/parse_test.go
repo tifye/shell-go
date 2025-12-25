@@ -69,6 +69,14 @@ func TestParseSingleCommands(t *testing.T) {
 			input:        `one \'\"two three\"\'`,
 			expectedArgs: []string{`one`, `'"two`, `three"'`},
 		},
+		{
+			input:        `one "A \\ escapes itself"`,
+			expectedArgs: []string{`one`, `A \ escapes itself`},
+		},
+		{
+			input:        `"A \" inside double quotes"`,
+			expectedArgs: []string{`A " inside double quotes`},
+		},
 	}
 
 	for _, test := range tt {

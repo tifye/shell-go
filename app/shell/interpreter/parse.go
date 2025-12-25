@@ -167,7 +167,7 @@ func (p *parser) parseText() *rawText {
 				return &rawText{literal: str}
 			}
 			p.nextToken()
-		case tokenText:
+		case tokenText, tokenEscaped:
 			str += p.curToken.literal
 			p.nextToken()
 		case tokenSingleQuote:
@@ -181,9 +181,6 @@ func (p *parser) parseText() *rawText {
 				return &rawText{literal: str}
 			}
 			p.nextToken()
-			p.nextToken()
-		case tokenEscaped:
-			str += p.curToken.literal
 			p.nextToken()
 		default:
 			return &rawText{literal: str}
@@ -226,11 +223,11 @@ func (p *parser) parseDoubleQuotes() *doubleQuotedText {
 
 Loop:
 	for {
-		switch {
-		case p.isPeekToken(tokenText):
+		switch p.peekToken.typ {
+		case tokenText, tokenEscaped:
 			p.nextToken()
 			_, _ = builder.WriteString(p.curToken.literal)
-		case p.isPeekToken(tokenDoubleQuote):
+		case tokenDoubleQuote:
 			p.nextToken()
 			if p.tryPeek(tokenDoubleQuote) {
 				_, _ = builder.WriteString(p.parseDoubleQuotes().literal)

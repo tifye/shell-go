@@ -153,6 +153,28 @@ func TestNextToken(t *testing.T) {
 				{tokenEOF, "", -1},
 			},
 		},
+		{
+			input: `"A \\ escapes itself"`,
+			output: []token{
+				{tokenDoubleQuote, `"`, -1},
+				{tokenText, "A ", -1},
+				{tokenEscaped, `\`, -1},
+				{tokenText, " escapes itself", -1},
+				{tokenDoubleQuote, `"`, -1},
+				{tokenEOF, ``, -1},
+			},
+		},
+		{
+			input: `"A \" inside double quotes"`,
+			output: []token{
+				{tokenDoubleQuote, `"`, -1},
+				{tokenText, `A `, -1},
+				{tokenEscaped, `"`, -1},
+				{tokenText, ` inside double quotes`, -1},
+				{tokenDoubleQuote, `"`, -1},
+				{tokenEOF, ``, -1},
+			},
+		},
 	}
 
 	for _, test := range tt {
