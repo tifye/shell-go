@@ -11,7 +11,8 @@ import (
 const (
 	eof = -1
 
-	spaceChars = " \t\r\n"
+	spaceChars        = " \t\r\n"
+	quotedEscapeChars = `"\`
 )
 
 type stateFunc func(*lexer) stateFunc
@@ -218,8 +219,18 @@ func lexInsideDoubleQuotes(l *lexer) stateFunc {
 			l.emit(tokenDoubleQuote)
 			return lexText
 		case '\\':
-			l.emitText()
-			l.escaped()
+			_ = l.next()
+			if strings.ContainsRune(quotedEscapeChars, l.peek()) {
+				l.backup()
+				l.emitText()
+
+				_ = l.accept(`\`)
+				l.discard()
+
+				_ = l.next()
+				l.emit(tokenEscaped)
+			}
+
 			return lexInsideDoubleQuotes
 		case eof:
 			return l.errorf("unclosed double quotes")

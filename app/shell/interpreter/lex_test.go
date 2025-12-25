@@ -175,6 +175,15 @@ func TestNextToken(t *testing.T) {
 				{tokenEOF, ``, -1},
 			},
 		},
+		{
+			input: `"\9"`,
+			output: []token{
+				{tokenDoubleQuote, `"`, -1},
+				{tokenText, `\9`, -1},
+				{tokenDoubleQuote, `"`, -1},
+				{tokenEOF, ``, -1},
+			},
+		},
 	}
 
 	for _, test := range tt {
