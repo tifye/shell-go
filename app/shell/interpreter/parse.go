@@ -232,6 +232,10 @@ Loop:
 			if p.tryPeek(tokenDoubleQuote) {
 				_, _ = builder.WriteString(p.parseDoubleQuotes().literal)
 			}
+
+			if p.tryPeek(tokenText) {
+				_, _ = builder.WriteString(p.parseText().literal)
+			}
 			break Loop
 		default:
 			break Loop

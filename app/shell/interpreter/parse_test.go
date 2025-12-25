@@ -77,6 +77,10 @@ func TestParseSingleCommands(t *testing.T) {
 			input:        `"A \" inside double quotes"`,
 			expectedArgs: []string{`A " inside double quotes`},
 		},
+		{
+			input:        `echo "example\"insidequotes"script\"`,
+			expectedArgs: []string{"echo", `example"insidequotesscript"`},
+		},
 	}
 
 	for _, test := range tt {
