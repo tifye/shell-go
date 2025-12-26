@@ -118,7 +118,7 @@ func (s *Shell) LookupPathCommand(name string) (string, *cmd.Command, bool) {
 		if found {
 			cmd := &cmd.Command{
 				Name: name,
-				Run: func(args []string) error {
+				Run: func(cmd *cmd.Command, args []string) error {
 					return s.Exec(s, exePath, args)
 				},
 			}

@@ -9,8 +9,10 @@ import (
 func NewExitCommand(s *shell.Shell) *cmd.Command {
 	assert.NotNil(s)
 	return &cmd.Command{
-		Name: "exit",
-		Run: func(args []string) error {
+		Name:   "exit",
+		Stdout: s.Stdout,
+		Stdin:  s.Stdin,
+		Run: func(cmd *cmd.Command, args []string) error {
 			return shell.ErrExit
 		},
 	}

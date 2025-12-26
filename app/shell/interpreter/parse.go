@@ -49,13 +49,17 @@ func (p *parser) nextToken() {
 
 func (p *parser) parse() *Program {
 	prog := &Program{
-		cmds: make([]*command, 0),
+		cmds: make([]*programCommand, 0),
 	}
 
 	for !p.isCurToken(tokenEOF) {
 		cmd := p.parseCommand()
 		if cmd != nil {
 			prog.cmds = append(prog.cmds, cmd)
+		}
+
+		if p.err != nil {
+			break
 		}
 
 		if p.isPeekToken(tokenEOF) {
@@ -93,7 +97,7 @@ func (p *parser) expectPeek(t tokenType) bool {
 }
 
 func (p *parser) peekError(t tokenType) {
-	p.error(fmt.Errorf("expected next token to be %d, got %d instead", t, p.peekToken.typ))
+	p.error(fmt.Errorf("expected next token to be %s, got %s instead", t, p.peekToken.typ))
 }
 
 func (p *parser) errorf(format string, v ...any) {
@@ -104,8 +108,8 @@ func (p *parser) error(err error) {
 	p.err = err
 }
 
-func (p *parser) parseCommand() *command {
-	pc := &command{
+func (p *parser) parseCommand() *programCommand {
+	pc := &programCommand{
 		args: []argument{},
 	}
 
@@ -132,6 +136,7 @@ func (p *parser) parseCommand() *command {
 	}
 	pc.cmd = cmd
 
+Loop:
 	for {
 		switch p.peekToken.typ {
 		case tokenText, tokenSpace, tokenEscaped:
@@ -153,8 +158,103 @@ func (p *parser) parseCommand() *command {
 				pc.args = append(pc.args, node)
 			}
 		default:
-			return pc
+			break Loop
 		}
+	}
+
+	switch {
+	case p.isPeekToken(tokenRedirect):
+		p.parseRedirect(pc)
+	case p.isPeekToken(tokenAppend):
+		p.parseAppend(pc)
+	}
+
+	return pc
+}
+
+func (p *parser) parseRedirect(pc *programCommand) {
+	assert.NotNil(pc)
+	assert.Assert(p.isPeekToken(tokenRedirect))
+
+	if !p.isCurToken(tokenSpace) {
+		p.errorf("expected space before redirect token")
+		return
+	}
+
+	p.nextToken()
+	if !p.expectPeek(tokenSpace) {
+		return
+	}
+
+	file := &fileRedirect{}
+
+	switch {
+	case strings.HasPrefix(p.curToken.literal, "1"):
+		pc.stdOut = file
+	case strings.HasPrefix(p.curToken.literal, "2"):
+		pc.stdErr = file
+	default:
+		pc.stdOut = file
+	}
+
+	switch p.peekToken.typ {
+	case tokenText, tokenSpace, tokenEscaped:
+		if node := p.parseText(); node != nil {
+			file.filename = node.literal
+		}
+	case tokenSingleQuote:
+		if node := p.parseSingleQuotes(); node != nil {
+			file.filename = node.literal
+		}
+	case tokenDoubleQuote:
+		if node := p.parseDoubleQuotes(); node != nil {
+			file.filename = node.literal
+		}
+	default:
+		p.errorf("expected filename after redirect token but got %s", p.peekToken.typ)
+	}
+}
+
+func (p *parser) parseAppend(pc *programCommand) {
+	assert.NotNil(pc)
+	assert.Assert(p.isPeekToken(tokenAppend))
+
+	if !p.isCurToken(tokenSpace) {
+		p.errorf("expected space before append token")
+		return
+	}
+
+	p.nextToken()
+	if !p.expectPeek(tokenSpace) {
+		return
+	}
+
+	file := &fileAppend{}
+
+	switch {
+	case strings.HasPrefix(p.curToken.literal, "1"):
+		pc.stdOut = file
+	case strings.HasPrefix(p.curToken.literal, "2"):
+		pc.stdErr = file
+	default:
+		pc.stdOut = file
+	}
+
+	switch p.peekToken.typ {
+	case tokenText, tokenSpace, tokenEscaped:
+		if node := p.parseText(); node != nil {
+			file.filename = node.literal
+		}
+	case tokenSingleQuote:
+		if node := p.parseSingleQuotes(); node != nil {
+			file.filename = node.literal
+		}
+	case tokenDoubleQuote:
+		if node := p.parseDoubleQuotes(); node != nil {
+			file.filename = node.literal
+		}
+	default:
+		p.errorf("expected filename after append token but got %s", p.peekToken.typ)
 	}
 }
 

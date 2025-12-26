@@ -184,6 +184,38 @@ func TestNextToken(t *testing.T) {
 				{tokenEOF, ``, -1},
 			},
 		},
+		{
+			input: `echo meep 1> mino.txt`,
+			output: []token{
+				{tokenText, "echo", -1},
+				{tokenSpace, " ", -1},
+				{tokenText, "meep", -1},
+				{tokenSpace, " ", -1},
+				{tokenRedirect, "1>", -1},
+				{tokenSpace, " ", -1},
+				{tokenText, "mino.txt", -1},
+				{tokenEOF, "", -1},
+			},
+		},
+		{
+			input: `echo meep >> mino.txt`,
+			output: []token{
+				{tokenText, "echo", -1},
+				{tokenSpace, " ", -1},
+				{tokenText, "meep", -1},
+				{tokenSpace, " ", -1},
+				{tokenAppend, ">>", -1},
+				{tokenSpace, " ", -1},
+				{tokenText, "mino.txt", -1},
+				{tokenEOF, "", -1},
+			},
+		},
+		{
+			input: `m>> mino.txt`,
+			output: []token{
+				{tokenError, "", -1},
+			},
+		},
 	}
 
 	for _, test := range tt {
@@ -191,8 +223,13 @@ func TestNextToken(t *testing.T) {
 			lexer := newLexer(test.input)
 			for i, outTok := range test.output {
 				tok := lexer.nextToken()
-				assert.Equal(t, outTok.typ, tok.typ, "token idx %d", i)
-				assert.Equal(t, outTok.literal, tok.literal, "token idx %d", i)
+				assert.Equal(t, outTok.typ.String(), tok.typ.String(), "token idx %d", i)
+				if outTok.typ != tokenError {
+					assert.Equal(t, outTok.literal, tok.literal, "token idx %d", i)
+					if tok.typ == tokenError {
+						assert.Fail(t, tok.String())
+					}
+				}
 			}
 		})
 	}

@@ -2,47 +2,87 @@ package interpreter
 
 import (
 	"fmt"
+	"io"
+	"os"
 
 	"github.com/codecrafters-io/shell-starter-go/app/cmd"
 )
 
 type Program struct {
-	cmds []*command
+	cmds []*programCommand
 }
 
 func (p *Program) Run() error {
 	for _, c := range p.cmds {
-		args, err := c.Args()
-		if err != nil {
-			return fmt.Errorf("failed to run %q command, got: %w", c.cmd.Name, err)
-		}
-		if err := c.cmd.Run(args); err != nil {
-			return fmt.Errorf("failed to run %q command, got: %w", c.cmd.Name, err)
+		if err := runCommand(c); err != nil {
+			return err
 		}
 	}
 	return nil
 }
 
+func runCommand(pc *programCommand) error {
+	if pc.stdOut != nil {
+		stdOutWriter, err := pc.stdOut.Writer()
+		if err != nil {
+			return fmt.Errorf("failed to get stdout: %w", err)
+		}
+		defer func() {
+			_ = stdOutWriter.Close()
+		}()
+		pc.cmd.Stdout = stdOutWriter
+	}
+
+	if pc.stdErr != nil {
+		stdErrWriter, err := pc.stdOut.Writer()
+		if err != nil {
+			return fmt.Errorf("failed to get stdout: %w", err)
+		}
+		defer func() {
+			_ = stdErrWriter.Close()
+		}()
+		pc.cmd.Stderr = stdErrWriter
+	}
+
+	args, err := pc.Args()
+	if err != nil {
+		return fmt.Errorf("failed to run %q command, got: %w", pc.cmd.Name, err)
+	}
+
+	if err := pc.cmd.Run(pc.cmd, args); err != nil {
+		return fmt.Errorf("failed to run %q command, got: %w", pc.cmd.Name, err)
+	}
+
+	return nil
+}
+
 type (
-	command struct {
-		cmd  *cmd.Command
-		args []argument
+	programCommand struct {
+		cmd    *cmd.Command
+		stdOut commandOut
+		stdErr commandOut
+		args   []argument
+	}
+
+	fileRedirect struct {
+		filename string
+	}
+	fileAppend struct {
+		filename string
 	}
 
 	rawText struct {
 		literal string
 	}
-
 	singleQuotedText struct {
 		literal string
 	}
-
 	doubleQuotedText struct {
 		literal string
 	}
 )
 
-func (c command) Args() ([]string, error) {
+func (c programCommand) Args() ([]string, error) {
 	out := make([]string, 0, len(c.args)+1)
 	out = append(out, c.cmd.Name)
 	for i := range c.args {
@@ -53,6 +93,17 @@ func (c command) Args() ([]string, error) {
 		out = append(out, arg)
 	}
 	return out, nil
+}
+
+type commandOut interface {
+	Writer() (io.WriteCloser, error)
+}
+
+func (f *fileRedirect) Writer() (io.WriteCloser, error) {
+	return os.OpenFile(f.filename, os.O_TRUNC|os.O_CREATE, 0644)
+}
+func (f *fileAppend) Writer() (io.WriteCloser, error) {
+	return os.OpenFile(f.filename, os.O_APPEND|os.O_CREATE, 0644)
 }
 
 type argument interface {

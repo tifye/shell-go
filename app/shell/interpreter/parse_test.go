@@ -83,7 +83,7 @@ func TestParseSingleCommands(t *testing.T) {
 		},
 		{
 			input:        `cat "/tmp/dog/'f  \53'"`,
-			expectedArgs: []string{`cat`, `/tmp/dog/'f \53'"`},
+			expectedArgs: []string{`cat`, `/tmp/dog/'f  \53'`},
 		},
 	}
 
@@ -104,9 +104,65 @@ func TestParseSingleCommands(t *testing.T) {
 	}
 }
 
+// todo: improve test structure
+func TestParseRedirects(t *testing.T) {
+	tt := []struct {
+		input    string
+		filename string
+	}{
+		{
+			input:    "echo meep > meep.txt",
+			filename: "meep.txt",
+		},
+		{
+			input:    "echo meep >> meep.txt",
+			filename: "meep.txt",
+		},
+		{
+			input:    "echo meep 1> meep.txt",
+			filename: "meep.txt",
+		},
+		{
+			input:    "echo meep 1>> meep.txt",
+			filename: "meep.txt",
+		},
+		{
+			input:    "echo meep 2> meep.txt",
+			filename: "meep.txt",
+		},
+		{
+			input:    "echo meep 2>> meep.txt",
+			filename: "meep.txt",
+		},
+	}
+
+	for _, test := range tt {
+		t.Run(test.input, func(t *testing.T) {
+			prog, err := Parse(test.input, CommandLookuperFunc(func(s string) (*cmd.Command, bool, error) {
+				return &cmd.Command{
+					Name: "",
+					Run:  func(cmd *cmd.Command, args []string) error { return nil },
+				}, true, nil
+			}))
+			require.NoError(t, err)
+			require.Len(t, prog.cmds, 1)
+
+			cmd := prog.cmds[0]
+			switch typ := cmd.stdOut.(type) {
+			case *fileAppend:
+				assert.Equal(t, test.filename, typ.filename)
+			case *fileRedirect:
+				assert.Equal(t, test.filename, typ.filename)
+			default:
+				assert.FailNow(t, "unsupported")
+			}
+		})
+	}
+}
+
 func assertCommandCall(t *testing.T, expectedArgs []string) cmd.CommandRunFunc {
 	t.Helper()
-	return func(args []string) error {
+	return func(cmd *cmd.Command, args []string) error {
 		assert.EqualValues(t, expectedArgs, args)
 		return nil
 	}

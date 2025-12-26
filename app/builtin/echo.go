@@ -12,11 +12,13 @@ import (
 func NewEchoCommand(s *shell.Shell) *cmd.Command {
 	assert.NotNil(s)
 	return &cmd.Command{
-		Name: "echo",
-		Run: func(args []string) error {
+		Name:   "echo",
+		Stdout: s.Stdout,
+		Stdin:  s.Stdin,
+		Run: func(cmd *cmd.Command, args []string) error {
 			assert.Assert(len(args) > 0)
 
-			fmt.Fprintf(s.Stdout, "%s\n", strings.Join(args[1:], " "))
+			fmt.Fprintf(cmd.Stdout, "%s\n", strings.Join(args[1:], " "))
 			return nil
 		},
 	}

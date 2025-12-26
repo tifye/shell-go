@@ -1,8 +1,13 @@
 package cmd
 
-type CommandRunFunc func(args []string) error
+import "io"
+
+type CommandRunFunc func(cmd *Command, args []string) error
 
 type Command struct {
-	Name string
-	Run  CommandRunFunc
+	Stdout io.Writer
+	Stderr io.Writer
+	Stdin  io.Reader
+	Name   string
+	Run    CommandRunFunc
 }

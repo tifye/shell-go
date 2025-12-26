@@ -76,6 +76,17 @@ func (l *lexer) emit(typ tokenType) {
 	l.start = l.pos
 }
 
+func (l *lexer) current() rune {
+	var r rune
+	if l.pos > 0 {
+		r, _ = utf8.DecodeRuneInString(l.input[l.pos-l.width:])
+	} else {
+		r, _ = utf8.DecodeRuneInString(l.input[:])
+	}
+
+	return r
+}
+
 // next advances the lexer one rune and return it
 func (l *lexer) next() rune {
 	if l.pos >= len(l.input) {
@@ -182,6 +193,18 @@ func lexText(l *lexer) stateFunc {
 			l.emitText()
 			l.emit(tokenEOF)
 			return nil
+		case r == '>':
+			if isSpace(l.current()) {
+				return lexRedirectOrAppend
+			}
+
+			l.backup()
+			if isSpace(l.current()) {
+				l.emitText()
+				return lexRedirectOrAppend
+			}
+
+			return l.errorf("expected space before a redirect at char %d but got \"%c\"", l.pos, l.current())
 		default:
 			_ = l.next()
 		}
@@ -208,6 +231,17 @@ func lexSingleQuotes(l *lexer) stateFunc {
 			l.next()
 		}
 	}
+}
+
+func lexRedirectOrAppend(l *lexer) stateFunc {
+	_ = l.accept("12")
+	assert.Assert(l.accept(">"))
+	if l.accept(">") {
+		l.emit(tokenAppend)
+	} else {
+		l.emit(tokenRedirect)
+	}
+	return lexText
 }
 
 func lexInsideDoubleQuotes(l *lexer) stateFunc {

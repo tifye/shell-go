@@ -11,8 +11,10 @@ import (
 func NewTypeCommand(s *shell.Shell) *cmd.Command {
 	assert.NotNil(s)
 	return &cmd.Command{
-		Name: "type",
-		Run: func(args []string) error {
+		Name:   "type",
+		Stdout: s.Stdout,
+		Stdin:  s.Stdin,
+		Run: func(cmd *cmd.Command, args []string) error {
 			assert.Assert(len(args) > 0)
 
 			if len(args) != 2 {
@@ -21,18 +23,18 @@ func NewTypeCommand(s *shell.Shell) *cmd.Command {
 
 			cmdName := args[1]
 			if _, found := s.LookupBuiltinCommand(cmdName); found {
-				_, _ = fmt.Fprintf(s.Stdout, "%s is a shell builtin\n", cmdName)
+				_, _ = fmt.Fprintf(cmd.Stdout, "%s is a shell builtin\n", cmdName)
 				return nil
 			}
 
 			path, _, found := s.LookupPathCommand(cmdName)
 			if found {
 				assert.Assert(len(path) > 0)
-				_, _ = fmt.Fprintf(s.Stdout, "%s is %s\n", cmdName, path)
+				_, _ = fmt.Fprintf(cmd.Stdout, "%s is %s\n", cmdName, path)
 				return nil
 			}
 
-			fmt.Fprintf(s.Stdout, "%s: not found\n", cmdName)
+			fmt.Fprintf(cmd.Stdout, "%s: not found\n", cmdName)
 			return nil
 		},
 	}

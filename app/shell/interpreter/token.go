@@ -4,6 +4,7 @@ import (
 	"fmt"
 )
 
+//go:generate stringer -type tokenType -trimprefix token
 type tokenType int
 
 const (
@@ -14,6 +15,8 @@ const (
 	tokenSingleQuote
 	tokenDoubleQuote
 	tokenEscaped
+	tokenRedirect
+	tokenAppend
 )
 
 type token struct {
