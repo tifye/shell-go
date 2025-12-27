@@ -30,7 +30,7 @@ type Shell struct {
 	builtins []*cmd.Command
 	Env      env
 	FS       fs.ReadDirFS
-	Exec     func(s *Shell, path string, args []string) error
+	Exec     func(cmd *cmd.Command, path string, args []string) error
 	FullPath func(string) (string, error)
 }
 
@@ -119,7 +119,7 @@ func (s *Shell) LookupPathCommand(name string) (string, *cmd.Command, bool) {
 			cmd := &cmd.Command{
 				Name: name,
 				Run: func(cmd *cmd.Command, args []string) error {
-					return s.Exec(s, exePath, args)
+					return s.Exec(cmd, exePath, args)
 				},
 			}
 			return exePath, cmd, true

@@ -3,12 +3,12 @@ package main
 import (
 	"os/exec"
 
-	"github.com/codecrafters-io/shell-starter-go/app/shell"
+	"github.com/codecrafters-io/shell-starter-go/app/cmd"
 	"github.com/codecrafters-io/shell-starter-go/assert"
 )
 
-func goexec(s *shell.Shell, path string, args []string) error {
-	assert.NotNil(s)
+func goexec(c *cmd.Command, path string, args []string) error {
+	assert.NotNil(c)
 	assert.Assert(len(path) > 0)
 	assert.Assert(len(args) > 0)
 
@@ -16,8 +16,8 @@ func goexec(s *shell.Shell, path string, args []string) error {
 		Path: path,
 		Args: args,
 	}
-	cmd.Stdin = s.Stdin
-	cmd.Stdout = s.Stdout
-	cmd.Stderr = s.Stdout
+	cmd.Stdin = c.Stdin
+	cmd.Stdout = c.Stdout
+	cmd.Stderr = c.Stderr
 	return cmd.Run()
 }
