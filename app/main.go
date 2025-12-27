@@ -11,6 +11,7 @@ import (
 func main() {
 	shell := &shell.Shell{
 		Stdout:   os.Stdout,
+		Stderr:   os.Stderr,
 		Stdin:    os.Stdin,
 		Env:      goenv{},
 		FS:       gofs{},

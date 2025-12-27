@@ -26,6 +26,7 @@ type env interface {
 
 type Shell struct {
 	Stdout   io.Writer
+	Stderr   io.Writer
 	Stdin    io.Reader
 	builtins []*cmd.Command
 	Env      env
@@ -36,6 +37,7 @@ type Shell struct {
 
 func (s *Shell) Run() error {
 	assert.NotNil(s.Stdout)
+	assert.NotNil(s.Stderr)
 	assert.NotNil(s.Stdin)
 
 	reader := bufio.NewReader(s.Stdin)
@@ -117,7 +119,10 @@ func (s *Shell) LookupPathCommand(name string) (string, *cmd.Command, bool) {
 		}
 		if found {
 			cmd := &cmd.Command{
-				Name: name,
+				Name:   name,
+				Stdout: s.Stdout,
+				Stderr: s.Stderr,
+				Stdin:  s.Stdin,
 				Run: func(cmd *cmd.Command, args []string) error {
 					return s.Exec(cmd, exePath, args)
 				},
