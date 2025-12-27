@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/codecrafters-io/shell-starter-go/app/cmd"
 )
@@ -100,9 +101,21 @@ type commandOut interface {
 }
 
 func (f *fileRedirect) Writer() (io.WriteCloser, error) {
+	dir := filepath.Dir(f.filename)
+	if len(dir) > 0 {
+		if err := os.MkdirAll(dir, os.ModeDir); err != nil {
+			return nil, err
+		}
+	}
 	return os.OpenFile(f.filename, os.O_TRUNC|os.O_CREATE, 0644)
 }
 func (f *fileAppend) Writer() (io.WriteCloser, error) {
+	dir := filepath.Dir(f.filename)
+	if len(dir) > 0 {
+		if err := os.MkdirAll(dir, os.ModeDir); err != nil {
+			return nil, err
+		}
+	}
 	return os.OpenFile(f.filename, os.O_APPEND|os.O_CREATE, 0644)
 }
 
