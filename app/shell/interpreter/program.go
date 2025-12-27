@@ -103,7 +103,7 @@ type commandOut interface {
 func (f *fileRedirect) Writer() (io.WriteCloser, error) {
 	dir := filepath.Dir(f.filename)
 	if len(dir) > 0 {
-		if err := os.MkdirAll(dir, os.ModeDir); err != nil {
+		if err := os.MkdirAll(dir, 0700); err != nil {
 			return nil, err
 		}
 	}
@@ -112,7 +112,7 @@ func (f *fileRedirect) Writer() (io.WriteCloser, error) {
 func (f *fileAppend) Writer() (io.WriteCloser, error) {
 	dir := filepath.Dir(f.filename)
 	if len(dir) > 0 {
-		if err := os.MkdirAll(dir, os.ModeDir); err != nil {
+		if err := os.MkdirAll(dir, 0700); err != nil {
 			return nil, err
 		}
 	}
