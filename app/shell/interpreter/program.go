@@ -107,7 +107,7 @@ func (f *fileRedirect) Writer() (io.WriteCloser, error) {
 			return nil, err
 		}
 	}
-	return os.OpenFile(f.filename, os.O_TRUNC|os.O_CREATE, 0644)
+	return os.OpenFile(f.filename, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
 }
 func (f *fileAppend) Writer() (io.WriteCloser, error) {
 	dir := filepath.Dir(f.filename)
@@ -116,7 +116,7 @@ func (f *fileAppend) Writer() (io.WriteCloser, error) {
 			return nil, err
 		}
 	}
-	return os.OpenFile(f.filename, os.O_APPEND|os.O_CREATE, 0644)
+	return os.OpenFile(f.filename, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
 }
 
 type argument interface {
