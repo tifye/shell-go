@@ -14,13 +14,12 @@ func goexec(c *cmd.Command, path string, args []string) error {
 	assert.Assert(len(args) > 0)
 
 	cmd := &exec.Cmd{
-		Path: path,
-		Args: args,
+		Path:   path,
+		Args:   args,
+		Stdin:  c.Stdin,
+		Stdout: c.Stdout,
+		Stderr: c.Stderr,
 	}
-
-	cmd.Stdin = c.Stdin
-	cmd.Stdout = c.Stdout
-	cmd.Stderr = c.Stderr
 
 	err := cmd.Run()
 	var exitErr *exec.ExitError

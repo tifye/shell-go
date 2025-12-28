@@ -231,6 +231,19 @@ func TestNextToken(t *testing.T) {
 				{tokenEOF, "", -1},
 			},
 		},
+		{
+			input: "echo meep 2> test.md",
+			output: []token{
+				{tokenText, "echo", -1},
+				{tokenSpace, " ", -1},
+				{tokenText, "meep", -1},
+				{tokenSpace, " ", -1},
+				{tokenRedirect, "2>", -1},
+				{tokenSpace, " ", -1},
+				{tokenText, "test.md", -1},
+				{tokenEOF, "", -1},
+			},
+		},
 	}
 
 	for _, test := range tt {

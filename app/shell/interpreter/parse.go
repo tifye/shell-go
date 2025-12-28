@@ -183,10 +183,6 @@ func (p *parser) parseRedirect(pc *programCommand) {
 		return
 	}
 
-	if !p.expectPeek(tokenSpace) {
-		return
-	}
-
 	file := &fileRedirect{}
 
 	switch {
@@ -196,6 +192,10 @@ func (p *parser) parseRedirect(pc *programCommand) {
 		pc.stdErr = file
 	default:
 		pc.stdOut = file
+	}
+
+	if !p.expectPeek(tokenSpace) {
+		return
 	}
 
 	switch p.peekToken.typ {
@@ -225,10 +225,6 @@ func (p *parser) parseAppend(pc *programCommand) {
 		return
 	}
 
-	if !p.expectPeek(tokenSpace) {
-		return
-	}
-
 	file := &fileAppend{}
 
 	switch {
@@ -238,6 +234,10 @@ func (p *parser) parseAppend(pc *programCommand) {
 		pc.stdErr = file
 	default:
 		pc.stdOut = file
+	}
+
+	if !p.expectPeek(tokenSpace) {
+		return
 	}
 
 	switch p.peekToken.typ {

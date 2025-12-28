@@ -13,6 +13,7 @@ func NewTypeCommand(s *shell.Shell) *cmd.Command {
 	return &cmd.Command{
 		Name:   "type",
 		Stdout: s.Stdout,
+		Stderr: s.Stderr,
 		Stdin:  s.Stdin,
 		Run: func(cmd *cmd.Command, args []string) error {
 			assert.Assert(len(args) > 0)
