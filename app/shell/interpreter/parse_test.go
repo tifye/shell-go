@@ -95,11 +95,12 @@ func TestParseSingleCommands(t *testing.T) {
 					Run:  assertCommandCall(t, test.expectedArgs),
 				}, true, nil
 			}))
-			require.NoError(t, err)
-			require.Len(t, prog.cmds, 1)
+			if assert.NoError(t, err) {
+				assert.Len(t, prog.cmds, 1)
+			}
 
 			err = prog.Run()
-			require.NoError(t, err)
+			assert.NoError(t, err)
 		})
 	}
 }
@@ -133,6 +134,10 @@ func TestParseRedirects(t *testing.T) {
 		{
 			input:    "echo meep 2>> meep.txt",
 			filename: "meep.txt",
+		},
+		{
+			input:    "echo 'Hello James' 1> test.txt",
+			filename: "test.txt",
 		},
 	}
 

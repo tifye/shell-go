@@ -216,6 +216,21 @@ func TestNextToken(t *testing.T) {
 				{tokenError, "", -1},
 			},
 		},
+		{
+			input: "echo 'Hello James' 1> /tmp/pig/bee.md",
+			output: []token{
+				{tokenText, "echo", -1},
+				{tokenSpace, " ", -1},
+				{tokenSingleQuote, "'", -1},
+				{tokenText, "Hello James", -1},
+				{tokenSingleQuote, "'", -1},
+				{tokenSpace, " ", -1},
+				{tokenRedirect, "1>", -1},
+				{tokenSpace, " ", -1},
+				{tokenText, "/tmp/pig/bee.md", -1},
+				{tokenEOF, "", -1},
+			},
+		},
 	}
 
 	for _, test := range tt {

@@ -26,6 +26,7 @@ type CommandLookuper interface {
 
 type parser struct {
 	l         *lexer
+	prevToken token
 	curToken  token
 	peekToken token
 	cmdLookup CommandLookuper
@@ -43,6 +44,7 @@ func newParser(l *lexer, cmdLookup CommandLookuper) *parser {
 }
 
 func (p *parser) nextToken() {
+	p.prevToken = p.curToken
 	p.curToken = p.peekToken
 	p.peekToken = p.l.nextToken()
 }
@@ -70,6 +72,10 @@ func (p *parser) parse() *Program {
 	}
 
 	return prog
+}
+
+func (p *parser) isPrevToken(t tokenType) bool {
+	return p.prevToken.typ == t
 }
 
 func (p *parser) isCurToken(t tokenType) bool {
@@ -138,35 +144,31 @@ func (p *parser) parseCommand() *programCommand {
 
 Loop:
 	for {
-		switch p.peekToken.typ {
+		switch p.curToken.typ {
 		case tokenText, tokenSpace, tokenEscaped:
-			p.nextToken()
 			node := p.parseText()
 			if len(node.literal) > 0 {
 				pc.args = append(pc.args, node)
 			}
 		case tokenSingleQuote:
-			p.nextToken()
 			node := p.parseSingleQuotes()
 			if len(node.literal) > 0 {
 				pc.args = append(pc.args, node)
 			}
 		case tokenDoubleQuote:
-			p.nextToken()
 			node := p.parseDoubleQuotes()
 			if len(node.literal) > 0 {
 				pc.args = append(pc.args, node)
 			}
+		case tokenRedirect:
+			p.parseRedirect(pc)
+			break Loop
+		case tokenAppend:
+			p.parseAppend(pc)
+			break Loop
 		default:
 			break Loop
 		}
-	}
-
-	switch {
-	case p.isPeekToken(tokenRedirect):
-		p.parseRedirect(pc)
-	case p.isPeekToken(tokenAppend):
-		p.parseAppend(pc)
 	}
 
 	return pc
@@ -174,14 +176,13 @@ Loop:
 
 func (p *parser) parseRedirect(pc *programCommand) {
 	assert.NotNil(pc)
-	assert.Assert(p.isPeekToken(tokenRedirect))
+	assert.Assert(p.isCurToken(tokenRedirect))
 
-	if !p.isCurToken(tokenSpace) {
+	if !p.isPrevToken(tokenSpace) {
 		p.errorf("expected space before redirect token")
 		return
 	}
 
-	p.nextToken()
 	if !p.expectPeek(tokenSpace) {
 		return
 	}
@@ -217,14 +218,13 @@ func (p *parser) parseRedirect(pc *programCommand) {
 
 func (p *parser) parseAppend(pc *programCommand) {
 	assert.NotNil(pc)
-	assert.Assert(p.isPeekToken(tokenAppend))
+	assert.Assert(p.isCurToken(tokenAppend))
 
-	if !p.isCurToken(tokenSpace) {
+	if !p.isPrevToken(tokenSpace) {
 		p.errorf("expected space before append token")
 		return
 	}
 
-	p.nextToken()
 	if !p.expectPeek(tokenSpace) {
 		return
 	}
@@ -263,10 +263,10 @@ func (p *parser) parseText() *rawText {
 	for {
 		switch p.curToken.typ {
 		case tokenSpace:
+			p.nextToken()
 			if len(str) > 0 {
 				return &rawText{literal: str}
 			}
-			p.nextToken()
 		case tokenText, tokenEscaped:
 			str += p.curToken.literal
 			p.nextToken()
@@ -305,6 +305,7 @@ Loop:
 			if p.tryPeek(tokenSingleQuote) {
 				_, _ = builder.WriteString(p.parseSingleQuotes().literal)
 			}
+			p.nextToken()
 			break Loop
 		default:
 			break Loop
@@ -335,6 +336,8 @@ Loop:
 
 			if p.tryPeek(tokenText) {
 				_, _ = builder.WriteString(p.parseText().literal)
+			} else {
+				p.nextToken()
 			}
 			break Loop
 		default:
