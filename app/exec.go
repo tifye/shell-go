@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"os/exec"
 
 	"github.com/codecrafters-io/shell-starter-go/app/cmd"
@@ -16,8 +17,16 @@ func goexec(c *cmd.Command, path string, args []string) error {
 		Path: path,
 		Args: args,
 	}
+
 	cmd.Stdin = c.Stdin
 	cmd.Stdout = c.Stdout
 	cmd.Stderr = c.Stderr
-	return cmd.Run()
+
+	err := cmd.Run()
+	var exitErr *exec.ExitError
+	if !errors.As(err, &exitErr) {
+		return err
+	}
+
+	return nil
 }
