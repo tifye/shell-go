@@ -35,9 +35,9 @@ func runCommand(pc *programCommand) error {
 	}
 
 	if pc.stdErr != nil {
-		stdErrWriter, err := pc.stdOut.Writer()
+		stdErrWriter, err := pc.stdErr.Writer()
 		if err != nil {
-			return fmt.Errorf("failed to get stdout: %w", err)
+			return fmt.Errorf("failed to get stderr: %w", err)
 		}
 		defer func() {
 			_ = stdErrWriter.Close()
