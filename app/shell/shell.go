@@ -24,6 +24,12 @@ type env interface {
 	Get(string) string
 }
 
+type History interface {
+	Push(string) error
+	Next() (string, error)
+	Previous() (string, error)
+}
+
 type Shell struct {
 	Stdout   io.Writer
 	Stderr   io.Writer
@@ -32,6 +38,7 @@ type Shell struct {
 	Env      env
 	FS       fs.ReadDirFS
 	Exec     func(cmd *cmd.Command, path string, args []string) error
+	History  History
 	FullPath func(string) (string, error)
 }
 
@@ -39,13 +46,14 @@ func (s *Shell) Run() error {
 	assert.NotNil(s.Stdout)
 	assert.NotNil(s.Stderr)
 	assert.NotNil(s.Stdin)
+	assert.NotNil(s.History)
 
 	reader := bufio.NewReader(s.Stdin)
 
 	for {
 		fmt.Fprint(s.Stdout, "$ ")
 
-		input, err := reader.ReadString('\n')
+		input, err := s.read(reader)
 		if err != nil {
 			_, _ = fmt.Fprintf(s.Stdout, "error reading input: %s\n", err)
 			return nil
@@ -66,6 +74,23 @@ func (s *Shell) Run() error {
 				return nil
 			}
 			_, _ = fmt.Fprintf(s.Stderr, "error executing: %s\n", err)
+		}
+	}
+}
+
+func (s *Shell) read(reader *bufio.Reader) (string, error) {
+	input := strings.Builder{}
+	for {
+		r, _, err := reader.ReadRune()
+		if err != nil {
+			return input.String(), fmt.Errorf("reading rune: %w", err)
+		}
+
+		switch r {
+		case '\n':
+			return input.String(), nil
+		default:
+			_, _ = input.WriteRune(r)
 		}
 	}
 }

@@ -6,6 +6,7 @@ import (
 
 	"github.com/codecrafters-io/shell-starter-go/app/builtin"
 	"github.com/codecrafters-io/shell-starter-go/app/shell"
+	"github.com/codecrafters-io/shell-starter-go/app/shell/history"
 )
 
 func main() {
@@ -16,6 +17,7 @@ func main() {
 		Env:      goenv{},
 		FS:       gofs{},
 		Exec:     goexec,
+		History:  history.NewInMemoryHistory(),
 		FullPath: filepath.Abs,
 	}
 	shell.AddBuiltins(
