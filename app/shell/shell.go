@@ -65,7 +65,7 @@ func (s *Shell) Run() error {
 			if errors.Is(err, ErrExit) {
 				return nil
 			}
-			_, _ = fmt.Fprintf(s.Stdout, "error executing: %s\n", err)
+			_, _ = fmt.Fprintf(s.Stderr, "error executing: %s\n", err)
 		}
 	}
 }
