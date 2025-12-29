@@ -58,3 +58,7 @@ func (h *InMemoryHistory) Dump(n int) []string {
 	n = len(h.history) - n
 	return slices.Clone(h.history[n:])
 }
+
+func (h *InMemoryHistory) Size() int64 {
+	return int64(len(h.history))
+}

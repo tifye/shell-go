@@ -30,8 +30,9 @@ func NewHistoryCommand(s *shell.Shell) *cmd.Command {
 			}
 
 			hist := s.History.Dump(n)
+			offset := int(s.History.Size()) - len(hist)
 			for i, item := range hist {
-				hist[i] = fmt.Sprintf("\t%d %s", i+1, item)
+				hist[i] = fmt.Sprintf("  %d %s", offset+i+1, item)
 			}
 			histFormatted := strings.Join(hist, "\n")
 			_, err := fmt.Fprintln(cmd.Stdout, histFormatted)

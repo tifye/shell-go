@@ -29,6 +29,7 @@ type History interface {
 	Next() (string, error)
 	Previous() (string, error)
 	Dump(n int) []string
+	Size() int64
 }
 
 type Shell struct {
