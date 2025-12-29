@@ -28,7 +28,7 @@ type History interface {
 	Push(string) error
 	Next() (string, error)
 	Previous() (string, error)
-	Dump() []string
+	Dump(n int) []string
 }
 
 type Shell struct {

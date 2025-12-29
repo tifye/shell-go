@@ -2,6 +2,7 @@ package builtin
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/codecrafters-io/shell-starter-go/app/cmd"
@@ -17,7 +18,18 @@ func NewHistoryCommand(s *shell.Shell) *cmd.Command {
 		Stdout: s.Stdout,
 		Stderr: s.Stderr,
 		Run: func(cmd *cmd.Command, args []string) error {
-			hist := s.History.Dump()
+			n := -1
+
+			if len(args) >= 2 {
+				nArg := args[1]
+				nParsed, err := strconv.Atoi(nArg)
+				if err != nil {
+					return fmt.Errorf("expected integer argument")
+				}
+				n = nParsed
+			}
+
+			hist := s.History.Dump(n)
 			for i, item := range hist {
 				hist[i] = fmt.Sprintf("\t%d %s", i+1, item)
 			}

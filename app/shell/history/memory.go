@@ -1,6 +1,8 @@
 package history
 
 import (
+	"slices"
+
 	"github.com/codecrafters-io/shell-starter-go/assert"
 )
 
@@ -48,6 +50,11 @@ func (h *InMemoryHistory) Previous() (string, error) {
 	return h.history[h.pos], nil
 }
 
-func (h *InMemoryHistory) Dump() []string {
-	return h.history
+func (h *InMemoryHistory) Dump(n int) []string {
+	if n < 0 || n > len(h.history) {
+		n = len(h.history)
+	}
+
+	n = len(h.history) - n
+	return slices.Clone(h.history[n:])
 }
