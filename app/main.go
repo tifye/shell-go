@@ -24,6 +24,7 @@ func main() {
 		builtin.NewExitCommand(shell),
 		builtin.NewEchoCommand(shell),
 		builtin.NewTypeCommand(shell),
+		builtin.NewHistoryCommand(shell),
 	)
 	if err := shell.Run(); err != nil {
 		panic(err)
