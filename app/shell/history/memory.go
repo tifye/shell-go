@@ -47,3 +47,7 @@ func (h *InMemoryHistory) Previous() (string, error) {
 	h.pos = uint(nextPos)
 	return h.history[h.pos], nil
 }
+
+func (h *InMemoryHistory) Dump() []string {
+	return h.history
+}

@@ -28,6 +28,7 @@ type History interface {
 	Push(string) error
 	Next() (string, error)
 	Previous() (string, error)
+	Dump() []string
 }
 
 type Shell struct {
@@ -68,6 +69,8 @@ func (s *Shell) Run() error {
 			}
 			continue
 		}
+
+		_ = s.History.Push(input)
 
 		if err := prog.Run(); err != nil {
 			if errors.Is(err, ErrExit) {
