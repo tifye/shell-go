@@ -148,6 +148,9 @@ func (p *pipeOutRedirect) Write(b []byte) (int, error) {
 	}
 	return n, err
 }
+func (p *pipeOutRedirect) Close() error {
+	return p.pipeWriter.Close()
+}
 
 func (f *fileRedirect) Writer() (io.Writer, error) {
 	dir := filepath.Dir(f.filename)
