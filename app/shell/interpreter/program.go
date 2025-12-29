@@ -1,6 +1,7 @@
 package interpreter
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -137,8 +138,17 @@ type commandOut interface {
 }
 
 func (p *pipeOutRedirect) Writer() (io.Writer, error) {
-	return p.pipeWriter, nil
+	// ignore pipe writes incase
+	return p, nil
 }
+func (p *pipeOutRedirect) Write(b []byte) (int, error) {
+	n, err := p.pipeWriter.Write(b)
+	if errors.Is(err, io.ErrClosedPipe) {
+		return len(b), nil
+	}
+	return n, err
+}
+
 func (f *fileRedirect) Writer() (io.Writer, error) {
 	dir := filepath.Dir(f.filename)
 	if len(dir) > 0 {
