@@ -3,6 +3,7 @@ package interpreter
 import (
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/codecrafters-io/shell-starter-go/app/cmd"
@@ -38,8 +39,6 @@ func newParser(l *lexer, cmdLookup CommandLookuper) *parser {
 		l:         l,
 		cmdLookup: cmdLookup,
 	}
-	p.nextToken()
-	p.nextToken()
 	return p
 }
 
@@ -50,27 +49,11 @@ func (p *parser) nextToken() {
 }
 
 func (p *parser) parse() *Program {
+	p.nextToken()
+	p.nextToken()
 	prog := &Program{
-		cmds: make([]*programCommand, 0),
+		cmds: p.parseCommands(),
 	}
-
-	for !p.isCurToken(tokenEOF) {
-		cmd := p.parseCommand()
-		if cmd != nil {
-			prog.cmds = append(prog.cmds, cmd)
-		}
-
-		if p.err != nil {
-			break
-		}
-
-		if p.isPeekToken(tokenEOF) {
-			break
-		}
-
-		p.nextToken()
-	}
-
 	return prog
 }
 
@@ -114,9 +97,43 @@ func (p *parser) error(err error) {
 	p.err = err
 }
 
+func (p *parser) parseCommands() []*programCommand {
+	cmds := make([]*programCommand, 0)
+
+	var pipeIn *pipeInRedirect
+	for !p.isCurToken(tokenEOF) {
+		cmd := p.parseCommand()
+		if p.err != nil {
+			break
+		}
+		assert.NotNil(cmd)
+
+		if pipeIn != nil {
+			cmd.stdIn = pipeIn
+			pipeIn = nil
+		}
+
+		cmds = append(cmds, cmd)
+
+		if p.isCurToken(tokenPipeline) {
+			pr, pw := io.Pipe()
+			cmd.stdOut = &pipeOutRedirect{pw}
+			pipeIn = &pipeInRedirect{pr}
+		}
+
+		p.nextToken()
+	}
+
+	return cmds
+}
+
 func (p *parser) parseCommand() *programCommand {
 	pc := &programCommand{
 		args: []argument{},
+	}
+
+	for p.isCurToken(tokenSpace) {
+		p.nextToken()
 	}
 
 	cmdName := ""
@@ -128,6 +145,7 @@ func (p *parser) parseCommand() *programCommand {
 	case tokenDoubleQuote:
 		cmdName = p.parseDoubleQuotes().literal
 	default:
+		p.errorf("unsupported token type for command name: %q", p.curToken.typ)
 		return nil
 	}
 

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/codecrafters-io/shell-starter-go/app/cmd"
+	"golang.org/x/sync/errgroup"
 )
 
 type Program struct {
@@ -14,23 +15,40 @@ type Program struct {
 }
 
 func (p *Program) Run() error {
+	eg := errgroup.Group{}
+	eg.SetLimit(len(p.cmds))
 	for _, c := range p.cmds {
-		if err := runCommand(c); err != nil {
-			return err
-		}
+		eg.Go(func() error {
+			return runCommand(c)
+		})
 	}
-	return nil
+	return eg.Wait()
 }
 
 func runCommand(pc *programCommand) error {
+	if pc.stdIn != nil {
+		stdInReader, err := pc.stdIn.Reader()
+		if err != nil {
+			return fmt.Errorf("failed to get stdin: %w", err)
+		}
+		if rc, ok := stdInReader.(io.Closer); ok {
+			defer func() {
+				_ = rc.Close()
+			}()
+		}
+		pc.cmd.Stdin = stdInReader
+	}
+
 	if pc.stdOut != nil {
 		stdOutWriter, err := pc.stdOut.Writer()
 		if err != nil {
 			return fmt.Errorf("failed to get stdout: %w", err)
 		}
-		defer func() {
-			_ = stdOutWriter.Close()
-		}()
+		if wc, ok := stdOutWriter.(io.Closer); ok {
+			defer func() {
+				_ = wc.Close()
+			}()
+		}
 		pc.cmd.Stdout = stdOutWriter
 	}
 
@@ -39,9 +57,11 @@ func runCommand(pc *programCommand) error {
 		if err != nil {
 			return fmt.Errorf("failed to get stderr: %w", err)
 		}
-		defer func() {
-			_ = stdErrWriter.Close()
-		}()
+		if wc, ok := stdErrWriter.(io.Closer); ok {
+			defer func() {
+				_ = wc.Close()
+			}()
+		}
 		pc.cmd.Stderr = stdErrWriter
 	}
 
@@ -62,9 +82,17 @@ type (
 		cmd    *cmd.Command
 		stdOut commandOut
 		stdErr commandOut
+		stdIn  commandIn
 		args   []argument
 	}
 
+	pipeInRedirect struct {
+		pipeReader *io.PipeReader
+	}
+	// todo: implement a multi writer to allow for file and pipe redirect
+	pipeOutRedirect struct {
+		pipeWriter *io.PipeWriter
+	}
 	fileRedirect struct {
 		filename string
 	}
@@ -96,11 +124,22 @@ func (c programCommand) Args() ([]string, error) {
 	return out, nil
 }
 
-type commandOut interface {
-	Writer() (io.WriteCloser, error)
+type commandIn interface {
+	Reader() (io.Reader, error)
 }
 
-func (f *fileRedirect) Writer() (io.WriteCloser, error) {
+func (p *pipeInRedirect) Reader() (io.Reader, error) {
+	return p.pipeReader, nil
+}
+
+type commandOut interface {
+	Writer() (io.Writer, error)
+}
+
+func (p *pipeOutRedirect) Writer() (io.Writer, error) {
+	return p.pipeWriter, nil
+}
+func (f *fileRedirect) Writer() (io.Writer, error) {
 	dir := filepath.Dir(f.filename)
 	if len(dir) > 0 {
 		if err := os.MkdirAll(dir, 0700); err != nil {
@@ -109,7 +148,7 @@ func (f *fileRedirect) Writer() (io.WriteCloser, error) {
 	}
 	return os.OpenFile(f.filename, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
 }
-func (f *fileAppend) Writer() (io.WriteCloser, error) {
+func (f *fileAppend) Writer() (io.Writer, error) {
 	dir := filepath.Dir(f.filename)
 	if len(dir) > 0 {
 		if err := os.MkdirAll(dir, 0700); err != nil {

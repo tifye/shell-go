@@ -188,6 +188,11 @@ func lexText(l *lexer) stateFunc {
 			l.emitText()
 			l.escaped()
 			return lexText
+		case r == '|':
+			l.emitText()
+			_ = l.next()
+			l.emit(tokenPipeline)
+			return lexText
 		case r == eof:
 			_ = l.next()
 			l.emitText()
