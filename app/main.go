@@ -7,9 +7,22 @@ import (
 	"github.com/codecrafters-io/shell-starter-go/app/builtin"
 	"github.com/codecrafters-io/shell-starter-go/app/shell"
 	"github.com/codecrafters-io/shell-starter-go/app/shell/history"
+	"golang.org/x/term"
 )
 
 func main() {
+	run()
+}
+
+//go:noinline
+func run() {
+	fd := int(os.Stdin.Fd())
+	oldState, err := term.MakeRaw(fd)
+	if err != nil {
+		panic(err)
+	}
+	defer term.Restore(fd, oldState)
+
 	shell := &shell.Shell{
 		Stdout:   os.Stdout,
 		Stderr:   os.Stderr,

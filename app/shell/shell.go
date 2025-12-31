@@ -11,6 +11,7 @@ import (
 
 	"github.com/codecrafters-io/shell-starter-go/app/cmd"
 	"github.com/codecrafters-io/shell-starter-go/app/shell/interpreter"
+	"github.com/codecrafters-io/shell-starter-go/app/shell/terminal"
 	"github.com/codecrafters-io/shell-starter-go/assert"
 )
 
@@ -42,6 +43,9 @@ type Shell struct {
 	Exec     func(cmd *cmd.Command, path string, args []string) error
 	History  History
 	FullPath func(string) (string, error)
+
+	tr *terminal.TermReader
+	tw *terminal.TermWriter
 }
 
 func (s *Shell) Run() error {
@@ -50,13 +54,18 @@ func (s *Shell) Run() error {
 	assert.NotNil(s.Stdin)
 	assert.NotNil(s.History)
 
-	reader := bufio.NewReader(s.Stdin)
+	s.tw = terminal.NewTermWriter(s.Stdout)
+	s.tr = terminal.NewTermReader(s.Stdin, s.tw)
+	// reader := bufio.NewReader(s.Stdin)
 
 	for {
 		fmt.Fprint(s.Stdout, "$ ")
 
-		input, err := s.read(reader)
+		input, err := s.read()
 		if err != nil {
+			if errors.Is(err, ErrExit) {
+				return nil
+			}
 			_, _ = fmt.Fprintf(s.Stdout, "error reading input: %s\n", err)
 			return nil
 		}
@@ -82,7 +91,7 @@ func (s *Shell) Run() error {
 	}
 }
 
-func (s *Shell) read(reader *bufio.Reader) (string, error) {
+func (s *Shell) read1(reader *bufio.Reader) (string, error) {
 	input := strings.Builder{}
 	for {
 		r, _, err := reader.ReadRune()
@@ -95,6 +104,23 @@ func (s *Shell) read(reader *bufio.Reader) (string, error) {
 			return input.String(), nil
 		default:
 			_, _ = input.WriteRune(r)
+		}
+	}
+}
+
+func (s *Shell) read() (string, error) {
+	for {
+		switch item := s.tr.NextItem(); item.Type {
+		case terminal.ItemKeyUp:
+			_, _ = fmt.Fprintf(s.Stdout, "key up %q\n", item.Literal)
+		case terminal.ItemKeyDown:
+			_, _ = fmt.Fprintf(s.Stdout, "key down %q\n", item.Literal)
+		case terminal.ItemKeyCtrlC:
+			return "", ErrExit
+		case terminal.ItemLineInput:
+			return item.Literal, nil
+		default:
+			fmt.Println("default")
 		}
 	}
 }
