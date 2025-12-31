@@ -17,7 +17,7 @@ func NewHistoryContext(history term.History) *HistoryContext {
 	}
 }
 
-func (h *HistoryContext) Next() string {
+func (h *HistoryContext) Back() string {
 	h.idx += 1
 
 	if h.idx >= h.Len() {
@@ -31,7 +31,7 @@ func (h *HistoryContext) Next() string {
 	return item
 }
 
-func (h *HistoryContext) Previous() string {
+func (h *HistoryContext) Forward() string {
 	h.idx -= 1
 
 	if h.idx >= h.Len() {

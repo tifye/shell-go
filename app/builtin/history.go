@@ -105,15 +105,10 @@ func appendHistoryToFile(h *history.HistoryContext, fsys OpenFileFS, filename st
 	}
 	defer file.Close()
 
-	numItems := h.Len() - h.Position() - 1
-	items := make([][]byte, numItems)
-	for i := range numItems {
-		items[numItems-i-1] = []byte(h.Next() + "\n")
-	}
-
-	for _, item := range items {
+	for h.Position() > 0 {
+		item := []byte(h.Forward() + "\n")
 		if _, err := file.Write(item); err != nil {
-			return fmt.Errorf("file write: %w", err)
+			return fmt.Errorf("fìle write: %w", err)
 		}
 	}
 
