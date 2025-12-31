@@ -21,3 +21,4 @@ history
 e
 history 4
 exit
+history
