@@ -1,43 +1,59 @@
 package builtin
 
 import (
+	"bufio"
+	"flag"
 	"fmt"
+	"io/fs"
 	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/codecrafters-io/shell-starter-go/app/cmd"
-	"github.com/codecrafters-io/shell-starter-go/app/shell"
-	"github.com/codecrafters-io/shell-starter-go/assert"
+	"github.com/codecrafters-io/shell-starter-go/app/shell/history"
+	"golang.org/x/term"
 )
 
-func NewHistoryCommand(s *shell.Shell) *cmd.Command {
-	assert.NotNil(s)
+type historyOptions struct {
+	readFilename string
+}
+
+func NewHistoryCommand(historyCtx *history.HistoryContext, fsys fs.FS) *cmd.Command {
 	return &cmd.Command{
 		Name: "history",
 		Run: func(cmd *cmd.Command, args []string) error {
-			n := s.HistoryCtx.Len()
 
-			if len(args) >= 2 {
-				nArg := args[1]
+			opts := &historyOptions{}
+			flagset := flag.NewFlagSet("history", flag.ExitOnError)
+			flagset.StringVar(&opts.readFilename, "r", "", "Path to file from which to read history entries")
+			if err := flagset.Parse(args[1:]); err != nil {
+				return fmt.Errorf("parsing args: %w", err)
+			}
+			args = flagset.Args()
+
+			if len(opts.readFilename) > 0 {
+				return readHistoryFromFile(historyCtx, fsys, opts.readFilename)
+			}
+
+			numItems := historyCtx.Len()
+			if nArg := flagset.Arg(0); len(nArg) > 0 {
 				nParsed, err := strconv.Atoi(nArg)
 				if err != nil {
 					return fmt.Errorf("expected integer argument")
 				}
-				if nParsed < n {
-					n = nParsed
+				if nParsed < numItems {
+					numItems = nParsed
 				}
-				n = nParsed
 			}
 
-			hist := make([]string, n)
-			for i := range n {
-				hist[i] = s.HistoryCtx.At(i)
+			hist := make([]string, numItems)
+			for i := range numItems {
+				hist[i] = historyCtx.At(i)
 			}
 			// put most recent ones last
 			slices.Reverse(hist)
 
-			offset := s.HistoryCtx.Len() - n
+			offset := historyCtx.Len() - numItems
 			for i, item := range hist {
 				hist[i] = fmt.Sprintf("  %d %s", offset+i+1, item)
 			}
@@ -46,4 +62,22 @@ func NewHistoryCommand(s *shell.Shell) *cmd.Command {
 			return err
 		},
 	}
+}
+
+func readHistoryFromFile(h term.History, fsys fs.FS, filename string) error {
+	file, err := fsys.Open(filename)
+	if err != nil {
+		return fmt.Errorf("open file: %w", err)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		h.Add(line)
+	}
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("reading file: %w", err)
+	}
+	return nil
 }

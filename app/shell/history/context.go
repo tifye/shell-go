@@ -10,9 +10,9 @@ type HistoryContext struct {
 	idx int
 }
 
-func NewHistoryContext() *HistoryContext {
+func NewHistoryContext(history term.History) *HistoryContext {
 	return &HistoryContext{
-		History: NewInMemoryHistory(),
+		History: history,
 		idx:     -1,
 	}
 }

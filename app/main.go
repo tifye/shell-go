@@ -23,21 +23,22 @@ func run() {
 	}
 	defer term.Restore(fd, oldState)
 
+	fsys := gofs{}
 	shell := &shell.Shell{
 		Stdout:     os.Stdout,
 		Stderr:     os.Stderr,
 		Stdin:      os.Stdin,
 		Env:        goenv{},
-		FS:         gofs{},
+		FS:         fsys,
 		Exec:       goexec,
-		HistoryCtx: history.NewHistoryContext(),
+		HistoryCtx: history.NewHistoryContext(history.NewInMemoryHistory()),
 		FullPath:   filepath.Abs,
 	}
 	shell.AddBuiltins(
 		builtin.NewExitCommand(shell),
 		builtin.NewEchoCommand(),
 		builtin.NewTypeCommand(shell),
-		builtin.NewHistoryCommand(shell),
+		builtin.NewHistoryCommand(shell.HistoryCtx, fsys),
 	)
 	if err := shell.Run(); err != nil {
 		panic(err)
