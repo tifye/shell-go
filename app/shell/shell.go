@@ -13,6 +13,7 @@ import (
 	"github.com/codecrafters-io/shell-starter-go/app/shell/interpreter"
 	"github.com/codecrafters-io/shell-starter-go/app/shell/terminal"
 	"github.com/codecrafters-io/shell-starter-go/assert"
+	"golang.org/x/term"
 )
 
 var (
@@ -33,18 +34,22 @@ type History interface {
 	Size() int64
 }
 
-type Shell struct {
-	Stdout     io.Writer
-	Stderr     io.Writer
-	Stdin      io.Reader
-	builtins   []*cmd.Command
-	Env        env
-	FS         fs.ReadDirFS
-	Exec       func(cmd *cmd.Command, path string, args []string) error
-	FullPath   func(string) (string, error)
-	HistoryCtx *history.HistoryContext
+type FS interface {
+	fs.ReadDirFS
+	OpenFile(string, int) (io.ReadWriteCloser, error)
+}
 
-	historyIdx int
+type Shell struct {
+	Stdout   io.Writer
+	Stderr   io.Writer
+	Stdin    io.Reader
+	builtins []*cmd.Command
+	Env      env
+	FS       FS
+	Exec     func(cmd *cmd.Command, path string, args []string) error
+	FullPath func(string) (string, error)
+
+	History term.History
 
 	tr *terminal.TermReader
 	tw *terminal.TermWriter
@@ -54,12 +59,29 @@ func (s *Shell) Run() error {
 	assert.NotNil(s.Stdout)
 	assert.NotNil(s.Stderr)
 	assert.NotNil(s.Stdin)
-	assert.NotNil(s.HistoryCtx)
 
 	s.tw = terminal.NewTermWriter(s.Stdout)
+	s.tr = terminal.NewTermReader(s.Stdin, s.tw)
 	s.Stdout = s.tw
 	s.Stderr = s.tw
-	s.tr = terminal.NewTermReader(s.Stdin, s.tw)
+
+	histAppendCtx := history.NewHistoryContext(s.History)
+	if histFile := s.Env.Get("HISTFILE"); len(histFile) > 0 {
+		err := history.ReadHistoryFromFile(histAppendCtx, s.FS, s.Env.Get("HISTFILE"))
+		if err != nil {
+			fmt.Fprintf(s.Stderr, "failed to load command history: %s\n", err)
+		}
+	}
+	defer func() {
+		histFile := s.Env.Get("HISTFILE")
+		if len(histFile) <= 0 {
+			return
+		}
+		err := history.AppendHistoryToFile(histAppendCtx, s.FS, s.Env.Get("HISTFILE"))
+		if err != nil {
+			fmt.Fprintf(s.Stderr, "failed to save command history: %s\n", err)
+		}
+	}()
 
 	for {
 		fmt.Fprint(s.Stdout, "$ ")
@@ -74,7 +96,7 @@ func (s *Shell) Run() error {
 		}
 		input = strings.TrimPrefix(input, "$ ")
 
-		s.HistoryCtx.Add(input)
+		s.History.Add(input)
 
 		prog, err := interpreter.Parse(input, s)
 		if err != nil {
@@ -96,15 +118,16 @@ func (s *Shell) Run() error {
 }
 
 func (s *Shell) read() (string, error) {
-	s.HistoryCtx.Reset()
+	// Not exactly optimal but works for now
+	histNavCtx := history.NewHistoryContext(s.History)
 
 	for {
 		switch item := s.tr.NextItem(); item.Type {
 		case terminal.ItemKeyUp:
-			item, _ := s.HistoryCtx.Back()
+			item, _ := histNavCtx.Back()
 			s.tr.ReplaceWith("$ " + item)
 		case terminal.ItemKeyDown:
-			item, _ := s.HistoryCtx.Forward()
+			item, _ := histNavCtx.Forward()
 			s.tr.ReplaceWith("$ " + item)
 		case terminal.ItemKeyCtrlC:
 			return "", ErrExit

@@ -1,23 +1,22 @@
-package builtin
+package history
 
 import (
 	"bytes"
 	"io"
 	"testing"
 
-	"github.com/codecrafters-io/shell-starter-go/app/shell/history"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestAppendHistory(t *testing.T) {
 	buf := bytes.NewBuffer(nil)
-	hctx := history.NewHistoryContext(history.NewInMemoryHistory())
+	hctx := NewHistoryContext(NewInMemoryHistory())
 
 	hctx.Add("1")
 	hctx.Add("2")
 	hctx.Add("3")
 
-	err := appendHistoryToFile(hctx, OpenFileFSFunc(func(s string, i int) (io.ReadWriteCloser, error) {
+	err := AppendHistoryToFile(hctx, OpenFileFSFunc(func(s string, i int) (io.ReadWriteCloser, error) {
 		return &noOpCloser{buf}, nil
 	}), "")
 	assert.NoError(t, err)
@@ -26,7 +25,7 @@ func TestAppendHistory(t *testing.T) {
 	hctx.Add("5")
 	hctx.Add("6")
 
-	err = appendHistoryToFile(hctx, OpenFileFSFunc(func(s string, i int) (io.ReadWriteCloser, error) {
+	err = AppendHistoryToFile(hctx, OpenFileFSFunc(func(s string, i int) (io.ReadWriteCloser, error) {
 		return &noOpCloser{buf}, nil
 	}), "")
 	assert.NoError(t, err)

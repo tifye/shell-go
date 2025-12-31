@@ -26,14 +26,14 @@ func run() {
 	hist := history.NewInMemoryHistory()
 	fsys := gofs{}
 	shell := &shell.Shell{
-		Stdout:     os.Stdout,
-		Stderr:     os.Stderr,
-		Stdin:      os.Stdin,
-		Env:        goenv{},
-		FS:         fsys,
-		Exec:       goexec,
-		HistoryCtx: history.NewHistoryContext(hist),
-		FullPath:   filepath.Abs,
+		Stdout:   os.Stdout,
+		Stderr:   os.Stderr,
+		Stdin:    os.Stdin,
+		Env:      goenv{},
+		FS:       fsys,
+		Exec:     goexec,
+		History:  hist,
+		FullPath: filepath.Abs,
 	}
 
 	histCtx := history.NewHistoryContext(hist)

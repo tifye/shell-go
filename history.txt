@@ -1,2 +1,26 @@
 echo 1
+echo 2echo 1
 echo 2
+echo 1
+echo 2echo 1
+echo 2
+meep
+history
+ehco nic
+ehco noice
+echi 
+echo noice
+history
+echo 1
+echo 2echo 1
+echo 2
+echo 1
+echo 2echo 1
+echo 2
+meep
+history
+ehco nic
+ehco noice
+echi 
+echo noice
+history
