@@ -26,19 +26,19 @@ func (h *HistoryContext) Forward() bool {
 	return h.move(-1)
 }
 
-func (h *HistoryContext) move(i int) bool {
-	h.idx += i
-
+func (h *HistoryContext) move(i int) (hasItem bool) {
 	if h.idx >= h.Len() {
-		h.idx = h.Len()
-		return false
+		h.idx = h.Len() - 1
+		hasItem = false
 	}
 	if h.idx < 0 {
-		h.idx = -1
-		return false
+		h.idx = 0
+		hasItem = false
 	}
 
-	return true
+	h.idx += i
+	hasItem = true
+	return
 }
 
 func (h *HistoryContext) Position() int {
