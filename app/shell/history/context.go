@@ -52,3 +52,8 @@ func (h *HistoryContext) Position() int {
 func (h *HistoryContext) Reset() {
 	h.idx = -1
 }
+
+func (h *HistoryContext) Add(item string) {
+	h.idx -= 1
+	h.History.Add(item)
+}
