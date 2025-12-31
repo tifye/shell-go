@@ -37,7 +37,6 @@ func run() {
 	}
 
 	histCtx := history.NewHistoryContext(hist)
-	hist.WithHook(histCtx.OnAdd)
 	shell.AddBuiltins(
 		builtin.NewExitCommand(shell),
 		builtin.NewEchoCommand(),

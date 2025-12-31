@@ -198,6 +198,11 @@ func lexText(l *lexer) stateFunc {
 			l.emitText()
 			l.emit(tokenEOF)
 			return nil
+		case r == '&':
+			l.emitText()
+			_ = l.next()
+			l.emit(tokenAmpersand)
+			return lexText
 		case r == '>':
 			if isSpace(l.current()) {
 				return lexRedirectOrAppend

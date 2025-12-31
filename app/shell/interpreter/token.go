@@ -18,6 +18,7 @@ const (
 	tokenRedirect
 	tokenAppend
 	tokenPipeline
+	tokenAmpersand
 )
 
 type token struct {

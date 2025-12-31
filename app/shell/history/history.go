@@ -7,20 +7,12 @@ import (
 type InMemoryHistory struct {
 	pos     uint
 	history []string
-	hooks   []func(string)
 }
 
 func NewInMemoryHistory() *InMemoryHistory {
 	return &InMemoryHistory{
 		history: make([]string, 0),
 	}
-}
-
-func (h *InMemoryHistory) WithHook(hook func(string)) {
-	if h.hooks == nil {
-		h.hooks = make([]func(string), 0)
-	}
-	h.hooks = append(h.hooks, hook)
 }
 
 func (h *InMemoryHistory) Add(item string) {
@@ -30,9 +22,6 @@ func (h *InMemoryHistory) Add(item string) {
 		}
 	}
 	h.history = append(h.history, item)
-	for _, hook := range h.hooks {
-		hook(item)
-	}
 }
 
 func (h *InMemoryHistory) Len() int {
