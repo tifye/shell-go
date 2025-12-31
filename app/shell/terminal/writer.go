@@ -1,6 +1,7 @@
 package terminal
 
 import (
+	"bytes"
 	"io"
 	"unicode/utf8"
 )
@@ -15,8 +16,32 @@ func NewTermWriter(w io.Writer) *TermWriter {
 	}
 }
 
-func (t *TermWriter) Write(p []byte) (int, error) {
-	return t.w.Write(p)
+func (t *TermWriter) Write(p []byte) (n int, err error) {
+	// need to replace all \n with \r\n
+	// \r is carriage return which places the
+	// cursor back all the way to the left
+	for iter := 0; len(p) > 0 && iter < 4096; iter++ {
+		idx := bytes.IndexRune(p, '\n')
+		if idx < 0 {
+			nn, err := t.w.Write(p)
+			n += nn
+			return n, err
+		}
+
+		nn, err := t.w.Write(p[:idx])
+		n += nn
+		if err != nil {
+			return n, err
+		}
+		p = p[idx+1:]
+
+		nn, err = t.w.Write(crlf)
+		n += nn
+		if err != nil {
+			return n, err
+		}
+	}
+	return n, err
 }
 
 func (t *TermWriter) WriteRune(r rune) error {
