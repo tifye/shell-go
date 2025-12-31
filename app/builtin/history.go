@@ -54,6 +54,9 @@ func NewHistoryCommand(historyCtx *history.HistoryContext, fsys OpenFileFS) *cmd
 						numItems = nParsed
 					}
 				}
+				if numItems == 0 {
+					return nil
+				}
 				return printHistory(historyCtx, cmd.Stdout, numItems)
 			}
 		},
@@ -61,17 +64,9 @@ func NewHistoryCommand(historyCtx *history.HistoryContext, fsys OpenFileFS) *cmd
 }
 
 func printHistory(h term.History, w io.Writer, n int) error {
-	if n <= 0 {
-		return nil
-	}
-
-	if h.Len() < n {
-		n = h.Len()
-	}
-
 	offset := h.Len() - n
 	for i := range n {
-		item := []byte(h.At(i))
+		item := []byte(h.At(h.Len() - i - 1))
 		if _, err := fmt.Fprintf(w, "  %d  %s\n", offset+i+1, item); err != nil {
 			return err
 		}
