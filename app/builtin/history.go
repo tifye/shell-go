@@ -20,8 +20,9 @@ type OpenFileFS interface {
 }
 
 type historyOptions struct {
-	readFilename  string
-	writeFilename string
+	readFilename   string
+	writeFilename  string
+	appendFilename string
 }
 
 func NewHistoryCommand(historyCtx *history.HistoryContext, fsys OpenFileFS) *cmd.Command {
@@ -33,6 +34,7 @@ func NewHistoryCommand(historyCtx *history.HistoryContext, fsys OpenFileFS) *cmd
 			flagset := flag.NewFlagSet("history", flag.ExitOnError)
 			flagset.StringVar(&opts.readFilename, "r", "", "Path to file from which to read history entries")
 			flagset.StringVar(&opts.writeFilename, "w", "", "Path to file to which to write history entries")
+			flagset.StringVar(&opts.appendFilename, "a", "", "Path to file to which to append history entries")
 			if err := flagset.Parse(args[1:]); err != nil {
 				return fmt.Errorf("parsing args: %w", err)
 			}
@@ -43,6 +45,8 @@ func NewHistoryCommand(historyCtx *history.HistoryContext, fsys OpenFileFS) *cmd
 				return readHistoryFromFile(historyCtx, fsys, opts.readFilename)
 			case len(opts.writeFilename) > 0:
 				return writeHistoryToFile(historyCtx, fsys, opts.writeFilename)
+			case len(opts.appendFilename) > 0:
+				return writeHistoryToFile(historyCtx, fsys, opts.appendFilename)
 			default:
 				numItems := historyCtx.Len()
 				if nArg := flagset.Arg(0); flagset.NArg() > 0 {
@@ -79,6 +83,22 @@ func readHistoryFromFile(h term.History, fsys OpenFileFS, filename string) error
 }
 
 func writeHistoryToFile(h term.History, fsys OpenFileFS, filename string) error {
+	file, err := fsys.OpenFile(filename, os.O_WRONLY|os.O_TRUNC|os.O_CREATE)
+	if err != nil {
+		return fmt.Errorf("open file: %w", err)
+	}
+	defer file.Close()
+
+	for i := range h.Len() {
+		if _, err := file.Write([]byte(h.At(h.Len()-1-i) + "\n")); err != nil {
+			return fmt.Errorf("file write: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func appendHistoryToFile(h term.History, fsys OpenFileFS, filename string) error {
 	file, err := fsys.OpenFile(filename, os.O_WRONLY|os.O_APPEND|os.O_CREATE)
 	if err != nil {
 		return fmt.Errorf("open file: %w", err)
