@@ -1,6 +1,9 @@
 package terminal
 
-import "io"
+import (
+	"io"
+	"unicode/utf8"
+)
 
 type TermWriter struct {
 	w io.Writer
@@ -17,7 +20,10 @@ func (t *TermWriter) Write(p []byte) (int, error) {
 }
 
 func (t *TermWriter) WriteRune(r rune) error {
-	_, err := t.w.Write([]byte(string(r)))
+	b := make([]byte, 8)
+	n := utf8.EncodeRune(b, r)
+	b = b[:n]
+	_, err := t.w.Write(b)
 	return err
 }
 
