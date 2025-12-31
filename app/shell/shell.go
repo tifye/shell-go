@@ -73,6 +73,8 @@ func (s *Shell) Run() error {
 		}
 		input = strings.TrimPrefix(input, "$ ")
 
+		s.HistoryCtx.Add(input)
+
 		prog, err := interpreter.Parse(input, s)
 		if err != nil {
 			if errors.Is(err, interpreter.ErrCommandNotFound) {
@@ -82,8 +84,6 @@ func (s *Shell) Run() error {
 			}
 			continue
 		}
-
-		s.HistoryCtx.Add(input)
 
 		if err := prog.Run(); err != nil {
 			if errors.Is(err, ErrExit) {
