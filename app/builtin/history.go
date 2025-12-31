@@ -79,7 +79,7 @@ func readHistoryFromFile(h term.History, fsys OpenFileFS, filename string) error
 }
 
 func writeHistoryToFile(h term.History, fsys OpenFileFS, filename string) error {
-	file, err := fsys.OpenFile(filename, os.O_WRONLY|os.O_APPEND)
+	file, err := fsys.OpenFile(filename, os.O_WRONLY|os.O_APPEND|os.O_CREATE)
 	if err != nil {
 		return fmt.Errorf("open file: %w", err)
 	}
