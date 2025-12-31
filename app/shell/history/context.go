@@ -7,7 +7,8 @@ import (
 type HistoryContext struct {
 	term.History
 
-	idx int
+	idx  int
+	item string
 }
 
 func NewHistoryContext(history term.History) *HistoryContext {
@@ -17,36 +18,27 @@ func NewHistoryContext(history term.History) *HistoryContext {
 	}
 }
 
-func (h *HistoryContext) Back() (item string, more bool) {
-	h.idx += 1
-
-	if h.idx >= h.Len() {
-		h.idx = h.Len() - 1
-		more = false
-	}
-	if h.idx < 0 {
-		h.idx = 0
-		more = false
-	}
-
-	item = h.At(h.idx)
-	return
+func (h *HistoryContext) Back() bool {
+	return h.move(1)
 }
 
-func (h *HistoryContext) Forward() (item string, more bool) {
-	h.idx -= 1
+func (h *HistoryContext) Forward() bool {
+	return h.move(-1)
+}
+
+func (h *HistoryContext) move(i int) bool {
+	h.idx += i
 
 	if h.idx >= h.Len() {
 		h.idx = h.Len() - 1
-		more = false
+		return false
 	}
 	if h.idx < 0 {
 		h.idx = 0
-		more = false
+		return false
 	}
 
-	item = h.At(h.idx)
-	return
+	return true
 }
 
 func (h *HistoryContext) Position() int {
@@ -55,6 +47,10 @@ func (h *HistoryContext) Position() int {
 
 func (h *HistoryContext) Reset() {
 	h.idx = -1
+}
+
+func (h *HistoryContext) Item() string {
+	return h.At(h.idx)
 }
 
 func (h *HistoryContext) OnAdd(item string) {

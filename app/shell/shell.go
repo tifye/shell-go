@@ -101,11 +101,11 @@ func (s *Shell) read() (string, error) {
 	for {
 		switch item := s.tr.NextItem(); item.Type {
 		case terminal.ItemKeyUp:
-			input, _ := s.HistoryCtx.Back()
-			s.tr.ReplaceWith("$ " + input)
+			s.HistoryCtx.Back()
+			s.tr.ReplaceWith("$ " + s.HistoryCtx.Item())
 		case terminal.ItemKeyDown:
-			input, _ := s.HistoryCtx.Forward()
-			s.tr.ReplaceWith("$ " + input)
+			s.HistoryCtx.Forward()
+			s.tr.ReplaceWith("$ " + s.HistoryCtx.Item())
 		case terminal.ItemKeyCtrlC:
 			return "", ErrExit
 		case terminal.ItemLineInput:
