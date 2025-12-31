@@ -15,7 +15,7 @@ type HistoryContext struct {
 func NewHistoryContext(history term.History) *HistoryContext {
 	return &HistoryContext{
 		History:  history,
-		pos:      0,
+		pos:      -1,
 		knownLen: history.Len(),
 	}
 }
