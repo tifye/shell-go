@@ -1,7 +1,6 @@
 package shell
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"io"
@@ -55,8 +54,8 @@ func (s *Shell) Run() error {
 	assert.NotNil(s.History)
 
 	s.tw = terminal.NewTermWriter(s.Stdout)
+	s.Stdout = s.tw
 	s.tr = terminal.NewTermReader(s.Stdin, s.tw)
-	// reader := bufio.NewReader(s.Stdin)
 
 	for {
 		fmt.Fprint(s.Stdout, "$ ")
@@ -87,23 +86,6 @@ func (s *Shell) Run() error {
 				return nil
 			}
 			_, _ = fmt.Fprintf(s.Stderr, "error executing: %s\n", err)
-		}
-	}
-}
-
-func (s *Shell) read1(reader *bufio.Reader) (string, error) {
-	input := strings.Builder{}
-	for {
-		r, _, err := reader.ReadRune()
-		if err != nil {
-			return input.String(), fmt.Errorf("reading rune: %w", err)
-		}
-
-		switch r {
-		case '\n':
-			return input.String(), nil
-		default:
-			_, _ = input.WriteRune(r)
 		}
 	}
 }
