@@ -19,7 +19,7 @@ func NewEchoCommand(s *shell.Shell) *cmd.Command {
 		Run: func(cmd *cmd.Command, args []string) error {
 			assert.Assert(len(args) > 0)
 
-			fmt.Fprintf(cmd.Stdout, "%s\n", strings.Join(args[1:], " "))
+			fmt.Fprintf(cmd.Stdout, "%s\r\n", strings.Join(args[1:], " "))
 			return nil
 		},
 	}
