@@ -58,6 +58,7 @@ func (s *Shell) Run() error {
 
 	s.tw = terminal.NewTermWriter(s.Stdout)
 	s.Stdout = s.tw
+	s.Stderr = s.tw
 	s.tr = terminal.NewTermReader(s.Stdin, s.tw)
 
 	for {
