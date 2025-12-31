@@ -72,7 +72,7 @@ func printHistory(h term.History, w io.Writer, n int) error {
 	offset := h.Len() - n
 	for i := range n {
 		item := []byte(h.At(i))
-		if _, err := fmt.Fprintf(w, "  %d  %s\n", offset+i+1, item); err != nil {
+		if _, err := fmt.Fprintf(w, "  %d  %s\n", offset+n-i, item); err != nil {
 			return err
 		}
 	}
