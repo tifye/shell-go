@@ -30,11 +30,11 @@ func (h *HistoryContext) move(i int) bool {
 	h.idx += i
 
 	if h.idx >= h.Len() {
-		h.idx = h.Len() - 1
+		h.idx = h.Len()
 		return false
 	}
 	if h.idx < 0 {
-		h.idx = 0
+		h.idx = -1
 		return false
 	}
 
