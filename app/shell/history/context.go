@@ -54,6 +54,6 @@ func (h *HistoryContext) Reset() {
 }
 
 func (h *HistoryContext) Add(item string) {
-	h.idx -= 1
+	h.idx += 1
 	h.History.Add(item)
 }
