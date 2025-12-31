@@ -118,7 +118,6 @@ func (s *Shell) read() (string, error) {
 		case terminal.ItemKeyCtrlC:
 			return "", ErrExit
 		case terminal.ItemLineInput:
-			fmt.Println("uff", item.Literal)
 			return item.Literal, nil
 		default:
 			fmt.Println("default")

@@ -215,7 +215,7 @@ func handleKey(t *TermReader) stateFunc {
 	t.advanceView(size)
 
 	switch key {
-	case keyEnter:
+	case keyEnter, keyLF:
 		return handleEnterKey
 	default:
 		if key >= 32 {
@@ -233,7 +233,6 @@ func handleEnterKey(t *TermReader) stateFunc {
 	t.line = t.line[:0]
 	t.tw.Stage(crlf)
 	t.tw.Commit()
-	fmt.Println("mino", line)
 	return t.emit(ItemLineInput, line)
 }
 
