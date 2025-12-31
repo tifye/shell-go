@@ -1,3 +1,2 @@
 echo 1
 echo 2
-history -w history.txt
