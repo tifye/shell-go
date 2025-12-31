@@ -21,44 +21,62 @@ func NewHistoryContext(history term.History) *HistoryContext {
 }
 
 func (h *HistoryContext) Back() (string, bool) {
-	if grew := h.Len() - h.knownLen; grew > 0 {
-		h.pos += grew
-		h.knownLen = h.Len()
+	h.grow()
+
+	if h.Len() == 0 {
+		return "", false
+	}
+
+	ok := h.forwardIdx() <= h.Len()-1
+	if !ok {
+		return "", false
 	}
 
 	item := h.At(h.backIdx())
-
-	h.pos += 1
-	if h.pos >= h.Len()-1 {
-		h.pos = h.Len() - 1
-		return item, false
-	}
-
-	return item, true
+	h.advance(1)
+	return item, ok
 }
 
 func (h *HistoryContext) Forward() (string, bool) {
-	if grew := h.Len() - h.knownLen; grew > 0 {
-		h.pos += grew
-		h.knownLen = h.Len()
+	h.grow()
+
+	if h.Len() == 0 {
+		return "", false
+	}
+
+	ok := h.forwardIdx() >= 0
+	if !ok {
+		return "", false
 	}
 
 	item := h.At(h.forwardIdx())
-
-	h.pos -= 1
-	if h.pos <= 0 {
-		h.pos = 0
-		return item, false
-	}
-
-	return item, true
+	h.advance(-1)
+	return item, ok
 }
 
 func (h *HistoryContext) backIdx() int {
-	return min(h.knownLen, h.pos+1)
+	return h.pos + 1
 }
 func (h *HistoryContext) forwardIdx() int {
-	return max(0, h.pos-1)
+	return h.pos - 1
+}
+func (h *HistoryContext) grow() {
+	if grew := h.Len() - h.knownLen; grew > 0 {
+		if h.pos == -1 {
+			h.pos = 0
+		}
+		h.pos += grew
+		h.knownLen = h.Len()
+	}
+}
+func (h *HistoryContext) advance(n int) {
+	h.pos += n
+	if h.pos >= h.Len()-1 {
+		h.pos = h.Len() - 1
+	}
+	if h.pos <= 0 {
+		h.pos = 0
+	}
 }
 
 func (h *HistoryContext) Position() int {
