@@ -128,6 +128,9 @@ func (s *Shell) LookupBuiltinCommand(name string) (*cmd.Command, bool) {
 
 	for _, c := range s.builtins {
 		if strings.EqualFold(c.Name, name) {
+			c.Stdin = s.Stdin
+			c.Stdout = s.Stdout
+			c.Stderr = s.Stderr
 			return c, true
 		}
 	}

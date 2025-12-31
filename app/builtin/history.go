@@ -13,10 +13,7 @@ import (
 func NewHistoryCommand(s *shell.Shell) *cmd.Command {
 	assert.NotNil(s)
 	return &cmd.Command{
-		Name:   "history",
-		Stdin:  s.Stdin,
-		Stdout: s.Stdout,
-		Stderr: s.Stderr,
+		Name: "history",
 		Run: func(cmd *cmd.Command, args []string) error {
 			n := -1
 

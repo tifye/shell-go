@@ -35,7 +35,7 @@ func run() {
 	}
 	shell.AddBuiltins(
 		builtin.NewExitCommand(shell),
-		builtin.NewEchoCommand(shell),
+		builtin.NewEchoCommand(),
 		builtin.NewTypeCommand(shell),
 		builtin.NewHistoryCommand(shell),
 	)

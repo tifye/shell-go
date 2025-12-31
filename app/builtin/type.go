@@ -11,10 +11,7 @@ import (
 func NewTypeCommand(s *shell.Shell) *cmd.Command {
 	assert.NotNil(s)
 	return &cmd.Command{
-		Name:   "type",
-		Stdout: s.Stdout,
-		Stderr: s.Stderr,
-		Stdin:  s.Stdin,
+		Name: "type",
 		Run: func(cmd *cmd.Command, args []string) error {
 			assert.Assert(len(args) > 0)
 

@@ -5,17 +5,12 @@ import (
 	"strings"
 
 	"github.com/codecrafters-io/shell-starter-go/app/cmd"
-	"github.com/codecrafters-io/shell-starter-go/app/shell"
 	"github.com/codecrafters-io/shell-starter-go/assert"
 )
 
-func NewEchoCommand(s *shell.Shell) *cmd.Command {
-	assert.NotNil(s)
+func NewEchoCommand() *cmd.Command {
 	return &cmd.Command{
-		Name:   "echo",
-		Stdout: s.Stdout,
-		Stderr: s.Stderr,
-		Stdin:  s.Stdin,
+		Name: "echo",
 		Run: func(cmd *cmd.Command, args []string) error {
 			assert.Assert(len(args) > 0)
 
