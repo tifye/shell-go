@@ -59,5 +59,6 @@ func (h *HistoryContext) Position() int {
 }
 
 func (h *HistoryContext) Reset() {
-	h.pos = -1
+	h.knownLen = h.Len()
+	h.pos = 0
 }

@@ -96,7 +96,7 @@ func (s *Shell) Run() error {
 }
 
 func (s *Shell) read() (string, error) {
-	defer s.HistoryCtx.Reset()
+	s.HistoryCtx.Reset()
 
 	for {
 		switch item := s.tr.NextItem(); item.Type {

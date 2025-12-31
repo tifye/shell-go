@@ -7,6 +7,28 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestHistoryContextBack(t *testing.T) {
+	h := history.NewInMemoryHistory()
+	hctx := history.NewHistoryContext(h)
+
+	h.Add("1")
+	h.Add("2")
+	h.Add("3")
+
+	hctx.Reset()
+
+	item, more := hctx.Back()
+	assert.Equal(t, "3", item)
+	assert.True(t, more)
+	item, more = hctx.Back()
+	assert.Equal(t, "2", item)
+	assert.True(t, more)
+	item, more = hctx.Back()
+	assert.Equal(t, "1", item)
+	assert.False(t, more)
+
+}
+
 func TestHistoryContext(t *testing.T) {
 	h := history.NewInMemoryHistory()
 	hctx := history.NewHistoryContext(h)
@@ -16,17 +38,17 @@ func TestHistoryContext(t *testing.T) {
 	h.Add("3")
 
 	item, more := hctx.Forward()
-	assert.Equal(t, item, "1")
+	assert.Equal(t, "1", item)
 	assert.True(t, more)
 	item, more = hctx.Forward()
-	assert.Equal(t, item, "2")
+	assert.Equal(t, "2", item)
 	assert.True(t, more)
 	item, more = hctx.Forward()
-	assert.Equal(t, item, "3")
+	assert.Equal(t, "3", item)
 	assert.False(t, more)
 	//
 	item, more = hctx.Forward()
-	assert.Equal(t, item, "3")
+	assert.Equal(t, "3", item)
 	assert.False(t, more)
 
 	h.Add("4")
@@ -34,16 +56,16 @@ func TestHistoryContext(t *testing.T) {
 	h.Add("6")
 
 	item, more = hctx.Forward()
-	assert.Equal(t, item, "4")
+	assert.Equal(t, "4", item)
 	assert.True(t, more)
 	item, more = hctx.Forward()
-	assert.Equal(t, item, "5")
+	assert.Equal(t, "5", item)
 	assert.True(t, more)
 	item, more = hctx.Forward()
-	assert.Equal(t, item, "6")
+	assert.Equal(t, "6", item)
 	assert.False(t, more)
 	//
 	item, more = hctx.Forward()
-	assert.Equal(t, item, "6")
+	assert.Equal(t, "6", item)
 	assert.False(t, more)
 }
