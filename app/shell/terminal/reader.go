@@ -214,6 +214,8 @@ func handleKey(t *TermReader) stateFunc {
 	key, size := utf8.DecodeRune(t.view)
 	t.advanceView(size)
 
+	fmt.Println(string(key))
+
 	switch key {
 	case keyEnter:
 		return handleEnterKey
