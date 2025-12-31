@@ -86,7 +86,7 @@ func writeHistoryToFile(h term.History, fsys OpenFileFS, filename string) error 
 	defer file.Close()
 
 	for i := range h.Len() {
-		if _, err := file.Write([]byte(h.At(i) + "\n")); err != nil {
+		if _, err := file.Write([]byte(h.At(h.Len()-1-i) + "\n")); err != nil {
 			return fmt.Errorf("file write: %w", err)
 		}
 	}
