@@ -35,8 +35,10 @@ func (t *TermWriter) Write(p []byte) (n int, err error) {
 		}
 		p = p[idx+1:]
 
-		nn, err = t.w.Write(crlf)
-		n += nn
+		_, err = t.w.Write(crlf)
+		// the caller does not need to know
+		// we added extra bytes
+		n += 1
 		if err != nil {
 			return n, err
 		}
