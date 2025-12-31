@@ -214,8 +214,6 @@ func handleKey(t *TermReader) stateFunc {
 	key, size := utf8.DecodeRune(t.view)
 	t.advanceView(size)
 
-	fmt.Printf("\nkey=%q\n", key)
-
 	switch key {
 	case keyEnter:
 		return handleEnterKey
@@ -235,6 +233,7 @@ func handleEnterKey(t *TermReader) stateFunc {
 	t.line = t.line[:0]
 	t.tw.Stage(crlf)
 	t.tw.Commit()
+	fmt.Println("mino", line)
 	return t.emit(ItemLineInput, line)
 }
 
