@@ -13,7 +13,7 @@ type openFileFS interface {
 	OpenFile(string, int) (io.ReadWriteCloser, error)
 }
 
-func ReadHistoryFromFile(h term.History, fsys openFileFS, filename string) error {
+func ReadHistoryFromFile(h *HistoryContext, fsys openFileFS, filename string) error {
 	file, err := fsys.OpenFile(filename, os.O_RDONLY)
 	if err != nil {
 		return fmt.Errorf("open file: %w", err)
@@ -27,6 +27,9 @@ func ReadHistoryFromFile(h term.History, fsys openFileFS, filename string) error
 	}
 	if err := scanner.Err(); err != nil {
 		return fmt.Errorf("reading file: %w", err)
+	}
+
+	for _, ok := h.Forward(); ok; _, ok = h.Forward() {
 	}
 	return nil
 }

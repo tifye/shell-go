@@ -24,3 +24,462 @@ ehco noice
 echi 
 echo noice
 history
+echo 1
+echo 2echo 1
+echo 2
+echo 1
+echo 2echo 1
+echo 2
+meep
+history
+ehco nic
+ehco noice
+echi 
+echo noice
+history
+echo 1
+echo 2echo 1
+echo 2
+echo 1
+echo 2echo 1
+echo 2
+meep
+history
+ehco nic
+ehco noice
+echi 
+echo noice
+history
+ehco meep
+mspdf
+asdfa
+history 2
+echo 1
+echo 2echo 1
+echo 2
+echo 1
+echo 2echo 1
+echo 2
+meep
+history
+ehco nic
+ehco noice
+echi 
+echo noice
+history
+echo 1
+echo 2echo 1
+echo 2
+echo 1
+echo 2echo 1
+echo 2
+meep
+history
+ehco nic
+ehco noice
+echi 
+echo noice
+history
+echo 1
+echo 2echo 1
+echo 2
+echo 1
+echo 2echo 1
+echo 2
+meep
+history
+ehco nic
+ehco noice
+echi 
+echo noice
+history
+echo 1
+echo 2echo 1
+echo 2
+echo 1
+echo 2echo 1
+echo 2
+meep
+history
+ehco nic
+ehco noice
+echi 
+echo noice
+history
+ehco meep
+mspdf
+asdfa
+history 2
+ehco meep
+ofhsiodfha
+idsafoahfo
+history 2
+exit
+echo 1
+echo 2echo 1
+echo 2
+echo 1
+echo 2echo 1
+echo 2
+meep
+history
+ehco nic
+ehco noice
+echi 
+echo noice
+history
+echo 1
+echo 2echo 1
+echo 2
+echo 1
+echo 2echo 1
+echo 2
+meep
+history
+ehco nic
+ehco noice
+echi 
+echo noice
+history
+echo 1
+echo 2echo 1
+echo 2
+echo 1
+echo 2echo 1
+echo 2
+meep
+history
+ehco nic
+ehco noice
+echi 
+echo noice
+history
+echo 1
+echo 2echo 1
+echo 2
+echo 1
+echo 2echo 1
+echo 2
+meep
+history
+ehco nic
+ehco noice
+echi 
+echo noice
+history
+ehco meep
+mspdf
+asdfa
+history 2
+echo 1
+echo 2echo 1
+echo 2
+echo 1
+echo 2echo 1
+echo 2
+meep
+history
+ehco nic
+ehco noice
+echi 
+echo noice
+history
+echo 1
+echo 2echo 1
+echo 2
+echo 1
+echo 2echo 1
+echo 2
+meep
+history
+ehco nic
+ehco noice
+echi 
+echo noice
+history
+echo 1
+echo 2echo 1
+echo 2
+echo 1
+echo 2echo 1
+echo 2
+meep
+history
+ehco nic
+ehco noice
+echi 
+echo noice
+history
+echo 1
+echo 2echo 1
+echo 2
+echo 1
+echo 2echo 1
+echo 2
+meep
+history
+ehco nic
+ehco noice
+echi 
+echo noice
+history
+ehco meep
+mspdf
+asdfa
+history 2
+ehco meep
+ofhsiodfha
+idsafoahfo
+history 2
+exit
+ehco meep
+echo mion
+fsdoij
+history 2
+exit
+echo 1
+echo 2echo 1
+echo 2
+echo 1
+echo 2echo 1
+echo 2
+meep
+history
+ehco nic
+ehco noice
+echi 
+echo noice
+history
+echo 1
+echo 2echo 1
+echo 2
+echo 1
+echo 2echo 1
+echo 2
+meep
+history
+ehco nic
+ehco noice
+echi 
+echo noice
+history
+echo 1
+echo 2echo 1
+echo 2
+echo 1
+echo 2echo 1
+echo 2
+meep
+history
+ehco nic
+ehco noice
+echi 
+echo noice
+history
+echo 1
+echo 2echo 1
+echo 2
+echo 1
+echo 2echo 1
+echo 2
+meep
+history
+ehco nic
+ehco noice
+echi 
+echo noice
+history
+ehco meep
+mspdf
+asdfa
+history 2
+echo 1
+echo 2echo 1
+echo 2
+echo 1
+echo 2echo 1
+echo 2
+meep
+history
+ehco nic
+ehco noice
+echi 
+echo noice
+history
+echo 1
+echo 2echo 1
+echo 2
+echo 1
+echo 2echo 1
+echo 2
+meep
+history
+ehco nic
+ehco noice
+echi 
+echo noice
+history
+echo 1
+echo 2echo 1
+echo 2
+echo 1
+echo 2echo 1
+echo 2
+meep
+history
+ehco nic
+ehco noice
+echi 
+echo noice
+history
+echo 1
+echo 2echo 1
+echo 2
+echo 1
+echo 2echo 1
+echo 2
+meep
+history
+ehco nic
+ehco noice
+echi 
+echo noice
+history
+ehco meep
+mspdf
+asdfa
+history 2
+ehco meep
+ofhsiodfha
+idsafoahfo
+history 2
+exit
+echo 1
+echo 2echo 1
+echo 2
+echo 1
+echo 2echo 1
+echo 2
+meep
+history
+ehco nic
+ehco noice
+echi 
+echo noice
+history
+echo 1
+echo 2echo 1
+echo 2
+echo 1
+echo 2echo 1
+echo 2
+meep
+history
+ehco nic
+ehco noice
+echi 
+echo noice
+history
+echo 1
+echo 2echo 1
+echo 2
+echo 1
+echo 2echo 1
+echo 2
+meep
+history
+ehco nic
+ehco noice
+echi 
+echo noice
+history
+echo 1
+echo 2echo 1
+echo 2
+echo 1
+echo 2echo 1
+echo 2
+meep
+history
+ehco nic
+ehco noice
+echi 
+echo noice
+history
+ehco meep
+mspdf
+asdfa
+history 2
+echo 1
+echo 2echo 1
+echo 2
+echo 1
+echo 2echo 1
+echo 2
+meep
+history
+ehco nic
+ehco noice
+echi 
+echo noice
+history
+echo 1
+echo 2echo 1
+echo 2
+echo 1
+echo 2echo 1
+echo 2
+meep
+history
+ehco nic
+ehco noice
+echi 
+echo noice
+history
+echo 1
+echo 2echo 1
+echo 2
+echo 1
+echo 2echo 1
+echo 2
+meep
+history
+ehco nic
+ehco noice
+echi 
+echo noice
+history
+echo 1
+echo 2echo 1
+echo 2
+echo 1
+echo 2echo 1
+echo 2
+meep
+history
+ehco nic
+ehco noice
+echi 
+echo noice
+history
+ehco meep
+mspdf
+asdfa
+history 2
+ehco meep
+ofhsiodfha
+idsafoahfo
+history 2
+exit
+ehco meep
+echo mion
+fsdoij
+history 2
+exit
+history 12
+history 2
+history 120
+exit
+history
+exit
+history

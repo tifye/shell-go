@@ -63,11 +63,16 @@ func NewHistoryCommand(historyCtx *history.HistoryContext, fsys OpenFileFS) *cmd
 }
 
 func printHistory(h term.History, w io.Writer, n int) error {
-	hist := make([]string, n)
-	for i := range n {
-		hist[i] = h.At(i)
+	hctx := history.NewHistoryContext(h)
+	hist := make([]string, 0, n)
+	for ; n > 0; n-- {
+		item, ok := hctx.Back()
+		if !ok {
+			break
+		}
+		hist = append(hist, item)
 	}
-	// put most recent ones last
+
 	slices.Reverse(hist)
 
 	offset := h.Len() - n
