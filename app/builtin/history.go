@@ -2,6 +2,7 @@ package builtin
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -33,7 +34,10 @@ func NewHistoryCommand(s *shell.Shell) *cmd.Command {
 			for i := range n {
 				hist[i] = s.HistoryCtx.At(i)
 			}
-			offset := int(s.HistoryCtx.Len()) - len(hist)
+			// put most recent ones last
+			slices.Reverse(hist)
+
+			offset := s.HistoryCtx.Len() - n
 			for i, item := range hist {
 				hist[i] = fmt.Sprintf("  %d %s", offset+i+1, item)
 			}
