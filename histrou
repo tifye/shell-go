@@ -1,0 +1,7 @@
+echo 2
+echo a
+echo b
+history -a histrou
+echo c
+echo d
+history -a histrou
