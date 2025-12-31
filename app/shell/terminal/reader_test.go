@@ -16,7 +16,7 @@ func TestNextToken(t *testing.T) {
 	}{
 		{
 			"simple with linefeed",
-			imp("echo mino", keyEnter, keyLF),
+			imp("echo mino", keyEnter),
 			[]Item{{ItemLineInput, "echo mino"}},
 		},
 		{
