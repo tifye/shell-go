@@ -44,6 +44,10 @@ func (t *TermWriter) Write(p []byte) (n int, err error) {
 	return n, err
 }
 
+func (t *TermWriter) WriteString(s string) (n int, err error) {
+	return t.Write([]byte(s))
+}
+
 func (t *TermWriter) WriteRune(r rune) error {
 	b := make([]byte, 8)
 	n := utf8.EncodeRune(b, r)

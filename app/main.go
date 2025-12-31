@@ -24,14 +24,14 @@ func run() {
 	defer term.Restore(fd, oldState)
 
 	shell := &shell.Shell{
-		Stdout:   os.Stdout,
-		Stderr:   os.Stderr,
-		Stdin:    os.Stdin,
-		Env:      goenv{},
-		FS:       gofs{},
-		Exec:     goexec,
-		History:  history.NewInMemoryHistory(),
-		FullPath: filepath.Abs,
+		Stdout:     os.Stdout,
+		Stderr:     os.Stderr,
+		Stdin:      os.Stdin,
+		Env:        goenv{},
+		FS:         gofs{},
+		Exec:       goexec,
+		HistoryCtx: history.NewHistoryContext(),
+		FullPath:   filepath.Abs,
 	}
 	shell.AddBuiltins(
 		builtin.NewExitCommand(shell),

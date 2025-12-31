@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/codecrafters-io/shell-starter-go/app/cmd"
+	"github.com/codecrafters-io/shell-starter-go/app/shell/history"
 	"github.com/codecrafters-io/shell-starter-go/app/shell/interpreter"
 	"github.com/codecrafters-io/shell-starter-go/app/shell/terminal"
 	"github.com/codecrafters-io/shell-starter-go/assert"
@@ -33,15 +34,17 @@ type History interface {
 }
 
 type Shell struct {
-	Stdout   io.Writer
-	Stderr   io.Writer
-	Stdin    io.Reader
-	builtins []*cmd.Command
-	Env      env
-	FS       fs.ReadDirFS
-	Exec     func(cmd *cmd.Command, path string, args []string) error
-	History  History
-	FullPath func(string) (string, error)
+	Stdout     io.Writer
+	Stderr     io.Writer
+	Stdin      io.Reader
+	builtins   []*cmd.Command
+	Env        env
+	FS         fs.ReadDirFS
+	Exec       func(cmd *cmd.Command, path string, args []string) error
+	FullPath   func(string) (string, error)
+	HistoryCtx *history.HistoryContext
+
+	historyIdx int
 
 	tr *terminal.TermReader
 	tw *terminal.TermWriter
@@ -51,7 +54,7 @@ func (s *Shell) Run() error {
 	assert.NotNil(s.Stdout)
 	assert.NotNil(s.Stderr)
 	assert.NotNil(s.Stdin)
-	assert.NotNil(s.History)
+	assert.NotNil(s.HistoryCtx)
 
 	s.tw = terminal.NewTermWriter(s.Stdout)
 	s.Stdout = s.tw
@@ -68,6 +71,7 @@ func (s *Shell) Run() error {
 			_, _ = fmt.Fprintf(s.Stdout, "error reading input: %s\n", err)
 			return nil
 		}
+		input = strings.TrimPrefix(input, "$ ")
 
 		prog, err := interpreter.Parse(input, s)
 		if err != nil {
@@ -79,7 +83,7 @@ func (s *Shell) Run() error {
 			continue
 		}
 
-		_ = s.History.Push(input)
+		s.HistoryCtx.Add(input)
 
 		if err := prog.Run(); err != nil {
 			if errors.Is(err, ErrExit) {
@@ -91,12 +95,16 @@ func (s *Shell) Run() error {
 }
 
 func (s *Shell) read() (string, error) {
+	defer s.HistoryCtx.Reset()
+
 	for {
 		switch item := s.tr.NextItem(); item.Type {
 		case terminal.ItemKeyUp:
-			_, _ = fmt.Fprintf(s.Stdout, "key up %q\n", item.Literal)
+			input := s.HistoryCtx.Next()
+			s.tr.ReplaceWith("$ " + input)
 		case terminal.ItemKeyDown:
-			_, _ = fmt.Fprintf(s.Stdout, "key down %q\n", item.Literal)
+			input := s.HistoryCtx.Previous()
+			s.tr.ReplaceWith("$ " + input)
 		case terminal.ItemKeyCtrlC:
 			return "", ErrExit
 		case terminal.ItemLineInput:

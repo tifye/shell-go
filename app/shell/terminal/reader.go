@@ -98,6 +98,14 @@ func (t *TermReader) NextItem() Item {
 	}
 }
 
+func (t *TermReader) ReplaceWith(input string) error {
+	t.line = []rune(input)
+	t.tw.WriteByte('\r')
+	t.tw.Write([]byte{keyEscape, csi, 'K'})
+	t.tw.WriteString(input)
+	return nil
+}
+
 func (t *TermReader) error(e error) stateFunc {
 	t.item = Item{
 		Type:    ItemError,
