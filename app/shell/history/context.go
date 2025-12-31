@@ -54,5 +54,7 @@ func (h *HistoryContext) Reset() {
 }
 
 func (h *HistoryContext) OnAdd(item string) {
-	h.Back()
+	if h.Len() > 0 {
+		h.Back()
+	}
 }
