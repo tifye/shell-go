@@ -46,7 +46,7 @@ func NewHistoryCommand(historyCtx *history.HistoryContext, fsys OpenFileFS) *cmd
 			case len(opts.writeFilename) > 0:
 				return writeHistoryToFile(historyCtx, fsys, opts.writeFilename)
 			case len(opts.appendFilename) > 0:
-				return writeHistoryToFile(historyCtx, fsys, opts.appendFilename)
+				return appendHistoryToFile(historyCtx, fsys, opts.appendFilename)
 			default:
 				numItems := historyCtx.Len()
 				if nArg := flagset.Arg(0); flagset.NArg() > 0 {
