@@ -38,7 +38,7 @@ func run() {
 		builtin.NewExitCommand(shell),
 		builtin.NewEchoCommand(),
 		builtin.NewTypeCommand(shell),
-		builtin.NewHistoryCommand(shell.HistoryCtx, fsys),
+		builtin.NewHistoryCommand(history.NewHistoryContext(shell.HistoryCtx.History), fsys),
 	)
 	if err := shell.Run(); err != nil {
 		panic(err)

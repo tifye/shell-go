@@ -98,15 +98,21 @@ func writeHistoryToFile(h term.History, fsys OpenFileFS, filename string) error 
 	return nil
 }
 
-func appendHistoryToFile(h term.History, fsys OpenFileFS, filename string) error {
+func appendHistoryToFile(h *history.HistoryContext, fsys OpenFileFS, filename string) error {
 	file, err := fsys.OpenFile(filename, os.O_WRONLY|os.O_APPEND|os.O_CREATE)
 	if err != nil {
 		return fmt.Errorf("open file: %w", err)
 	}
 	defer file.Close()
 
-	for i := range h.Len() {
-		if _, err := file.Write([]byte(h.At(h.Len()-1-i) + "\n")); err != nil {
+	numItems := h.Len() - h.Position() - 1
+	items := make([][]byte, numItems)
+	for i := range numItems {
+		items[numItems-i-1] = []byte(h.Next() + "\n")
+	}
+
+	for _, item := range items {
+		if _, err := file.Write(item); err != nil {
 			return fmt.Errorf("file write: %w", err)
 		}
 	}

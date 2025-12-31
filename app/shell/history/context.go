@@ -45,6 +45,10 @@ func (h *HistoryContext) Previous() string {
 	return item
 }
 
+func (h *HistoryContext) Position() int {
+	return h.idx
+}
+
 func (h *HistoryContext) Reset() {
 	h.idx = -1
 }
