@@ -22,14 +22,14 @@ func NewHistoryContext(history term.History) *HistoryContext {
 
 func (h *HistoryContext) Back() (string, bool) {
 	if grew := h.Len() - h.knownLen; grew > 0 {
-		h.pos += grew - 1
+		h.pos += grew
 		h.knownLen = h.Len()
 	}
 
-	item := h.At(h.pos)
+	item := h.At(h.backIdx())
 
 	h.pos += 1
-	if h.pos > h.Len()-1 {
+	if h.pos >= h.Len()-1 {
 		h.pos = h.Len() - 1
 		return item, false
 	}
@@ -39,19 +39,26 @@ func (h *HistoryContext) Back() (string, bool) {
 
 func (h *HistoryContext) Forward() (string, bool) {
 	if grew := h.Len() - h.knownLen; grew > 0 {
-		h.pos += grew - 1
+		h.pos += grew
 		h.knownLen = h.Len()
 	}
 
-	item := h.At(h.pos)
+	item := h.At(h.forwardIdx())
 
 	h.pos -= 1
-	if h.pos < 0 {
+	if h.pos <= 0 {
 		h.pos = 0
 		return item, false
 	}
 
 	return item, true
+}
+
+func (h *HistoryContext) backIdx() int {
+	return min(h.knownLen, h.pos+1)
+}
+func (h *HistoryContext) forwardIdx() int {
+	return max(0, h.pos-1)
 }
 
 func (h *HistoryContext) Position() int {
@@ -60,5 +67,5 @@ func (h *HistoryContext) Position() int {
 
 func (h *HistoryContext) Reset() {
 	h.knownLen = h.Len()
-	h.pos = 0
+	h.pos = -1
 }
