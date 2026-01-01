@@ -105,7 +105,7 @@ func LoadFromPathEnv(
 			continue
 		}
 
-		cmdPaths, _ := commandsInPath(p, fsys, fullPath)
+		cmdPaths, _ := commandsInPath(registry, p, fsys, fullPath)
 		for k, v := range cmdPaths {
 			registry.AddPathExec(k, v)
 		}
@@ -114,7 +114,7 @@ func LoadFromPathEnv(
 	return registry, nil
 }
 
-func commandsInPath(dir string, fsys fs.FS, fullPath func(string) (string, error)) (map[string]string, error) {
+func commandsInPath(registry *Registry, dir string, fsys fs.FS, fullPath func(string) (string, error)) (map[string]string, error) {
 	assert.Assert(len(dir) > 0, "expected non-empty path")
 	assert.Assertf(len(dir) < 4026, "unexpectedly large path: %s", dir)
 	assert.NotNil(fsys, "fsys")
@@ -145,6 +145,9 @@ func commandsInPath(dir string, fsys fs.FS, fullPath func(string) (string, error
 			fname := entry.Name()
 			fname = strings.TrimSuffix(fname, filepath.Ext(fname))
 			if _, ok := cmdPaths[fname]; ok {
+				return nil
+			}
+			if _, ok := registry.path[fname]; ok {
 				return nil
 			}
 
