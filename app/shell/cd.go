@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"runtime"
+	"strings"
 
 	"github.com/codecrafters-io/shell-starter-go/app/cmd"
 )
@@ -18,9 +20,18 @@ func NewCDCommandFunc(s *Shell) cmd.CommandFunc {
 				}
 
 				target := args[1]
-				if !os.IsPathSeparator(target[0]) {
-					target = s.WorkingDir + string(os.PathSeparator) + target
+				if strings.Contains(target, "~") {
+					home := s.Env.Get("HOME")
+					if runtime.GOOS == "windows" {
+						home = s.Env.Get("USERPROFILE")
+					}
+					target = strings.Replace(target, "~", home, 1)
+				} else {
+					if !os.IsPathSeparator(target[0]) {
+						target = s.WorkingDir + string(os.PathSeparator) + target
+					}
 				}
+
 				target, err := s.FullPathFunc(target)
 				if err != nil {
 					return fmt.Errorf("failed to get full path of %q: %w\n", target, err)
