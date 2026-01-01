@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
 	"strings"
 
 	"github.com/codecrafters-io/shell-starter-go/assert"
@@ -86,7 +87,7 @@ func (r *Registry) MatchAll(reg *regexp.Regexp) []string {
 	for k := range matches {
 		keys = append(keys, k)
 	}
-
+	slices.Reverse(keys)
 	return keys
 }
 
