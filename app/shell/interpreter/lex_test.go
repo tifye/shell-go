@@ -257,6 +257,20 @@ func TestNextToken(t *testing.T) {
 				{tokenEOF, "", -1},
 			},
 		},
+		{
+			input: `echo $HOME "Welcome ${HOME}."`,
+			output: []token{
+				{tokenText, "echo", -1},
+				{tokenSpace, " ", -1},
+				{tokenVariable, "$HOME", -1},
+				{tokenSpace, " ", -1},
+				{tokenDoubleQuote, "\"", -1},
+				{tokenText, "Welcome ", -1},
+				{tokenVariable, "${HOME}", -1},
+				{tokenText, ".", -1},
+				{tokenDoubleQuote, "\"", -1},
+			},
+		},
 	}
 
 	for _, test := range tt {

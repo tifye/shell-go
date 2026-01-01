@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/codecrafters-io/shell-starter-go/app/cmd"
 	"golang.org/x/sync/errgroup"
@@ -84,7 +85,7 @@ type (
 		stdOut commandOut
 		stdErr commandOut
 		stdIn  commandIn
-		args   []argument
+		args   []StringNode
 	}
 
 	pipeInRedirect struct {
@@ -101,6 +102,10 @@ type (
 		filename string
 	}
 
+	variable struct {
+		literal string
+		lookup  func(string) string
+	}
 	rawText struct {
 		literal string
 	}
@@ -108,7 +113,7 @@ type (
 		literal string
 	}
 	doubleQuotedText struct {
-		literal string
+		parts []StringNode
 	}
 )
 
@@ -171,10 +176,13 @@ func (f *fileAppend) Writer() (io.Writer, error) {
 	return os.OpenFile(f.filename, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
 }
 
-type argument interface {
+type StringNode interface {
 	String() (string, error)
 }
 
+func (v variable) String() (string, error) {
+	return os.Expand(v.literal, v.lookup), nil
+}
 func (t rawText) String() (string, error) {
 	return t.literal, nil
 }
@@ -182,5 +190,13 @@ func (t singleQuotedText) String() (string, error) {
 	return t.literal, nil
 }
 func (t doubleQuotedText) String() (string, error) {
-	return t.literal, nil
+	b := strings.Builder{}
+	for i := range t.parts {
+		s, err := t.parts[i].String()
+		if err != nil {
+			return "", err
+		}
+		b.WriteString(s)
+	}
+	return b.String(), nil
 }

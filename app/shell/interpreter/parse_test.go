@@ -85,6 +85,10 @@ func TestParseSingleCommands(t *testing.T) {
 			input:        `cat "/tmp/dog/'f  \53'"`,
 			expectedArgs: []string{`cat`, `/tmp/dog/'f  \53'`},
 		},
+		{
+			input:        `echo $HOME "Welcome ${HOME}."`,
+			expectedArgs: []string{`echo`, `<HOME>`, `Welcome <HOME>.`},
+		},
 	}
 
 	for _, test := range tt {
@@ -94,7 +98,7 @@ func TestParseSingleCommands(t *testing.T) {
 					Name: test.expectedArgs[0],
 					Run:  assertCommandCall(t, test.expectedArgs),
 				}, true, nil
-			}))
+			}), getEnv)
 			if assert.NoError(t, err) {
 				assert.Len(t, prog.cmds, 1)
 			}
@@ -148,7 +152,7 @@ func TestParseRedirects(t *testing.T) {
 					Name: "",
 					Run:  func(cmd *cmd.Command, args []string) error { return nil },
 				}, true, nil
-			}))
+			}), getEnv)
 			require.NoError(t, err)
 			require.Len(t, prog.cmds, 1)
 
@@ -177,4 +181,8 @@ type CommandLookuperFunc func(string) (*cmd.Command, bool, error)
 
 func (f CommandLookuperFunc) LookupCommand(name string) (*cmd.Command, bool, error) {
 	return f(name)
+}
+
+func getEnv(n string) string {
+	return "<" + n + ">"
 }

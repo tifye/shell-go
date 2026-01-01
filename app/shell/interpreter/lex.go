@@ -3,6 +3,7 @@ package interpreter
 import (
 	"fmt"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/codecrafters-io/shell-starter-go/assert"
@@ -12,7 +13,7 @@ const (
 	eof = -1
 
 	spaceChars        = " \t\r\n"
-	quotedEscapeChars = `"\`
+	quotedEscapeChars = `"\$`
 )
 
 type stateFunc func(*lexer) stateFunc
@@ -159,12 +160,50 @@ func (l *lexer) escaped() {
 	}
 
 	l.discard()
-	_ = l.next()
+	l.next()
 	l.emit(tokenEscaped)
+}
+
+func (l *lexer) variable() {
+	if !l.accept("$") {
+		l.emit(tokenError)
+		return
+	}
+
+	hasParen := l.accept("{")
+
+	for {
+		switch r := l.next(); {
+		case isAlphaNumeric(r):
+			// continue
+		case r == '}':
+			if !hasParen {
+				l.errorf("unexpected closing paren")
+				return
+			}
+
+			l.emit(tokenVariable)
+			return
+		default:
+			l.backup()
+
+			if hasParen {
+				l.errorf("unclosed variable paren")
+				return
+			}
+
+			l.emit(tokenVariable)
+			return
+		}
+	}
 }
 
 func isSpace(r rune) bool {
 	return r == ' ' || r == '\n' || r == '\t' || r == '\r'
+}
+
+func isAlphaNumeric(r rune) bool {
+	return r == '_' || unicode.IsLetter(r) || unicode.IsDigit(r)
 }
 
 func lexText(l *lexer) stateFunc {
@@ -181,7 +220,7 @@ func lexText(l *lexer) stateFunc {
 			return lexSingleQuotes
 		case r == '"':
 			l.emitText()
-			_ = l.next()
+			l.next()
 			l.emit(tokenDoubleQuote)
 			return lexInsideDoubleQuotes
 		case r == '\\':
@@ -190,18 +229,22 @@ func lexText(l *lexer) stateFunc {
 			return lexText
 		case r == '|':
 			l.emitText()
-			_ = l.next()
+			l.next()
 			l.emit(tokenPipeline)
 			return lexText
 		case r == eof:
-			_ = l.next()
+			l.next()
 			l.emitText()
 			l.emit(tokenEOF)
 			return nil
 		case r == '&':
 			l.emitText()
-			_ = l.next()
+			l.next()
 			l.emit(tokenAmpersand)
+			return lexText
+		case r == '$':
+			l.emitText()
+			l.variable()
 			return lexText
 		case r == '>':
 			if isSpace(l.current()) {
@@ -216,7 +259,7 @@ func lexText(l *lexer) stateFunc {
 
 			return l.errorf("expected space before a redirect at char %d but got \"%c\"", l.pos, l.current())
 		default:
-			_ = l.next()
+			l.next()
 		}
 	}
 }
@@ -259,11 +302,15 @@ func lexInsideDoubleQuotes(l *lexer) stateFunc {
 		switch l.peek() {
 		case '"':
 			l.emitText()
-			_ = l.next()
+			l.next()
 			l.emit(tokenDoubleQuote)
 			return lexText
+		case '$':
+			l.emitText()
+			l.variable()
+			return lexInsideDoubleQuotes
 		case '\\':
-			_ = l.next()
+			l.next()
 			if strings.ContainsRune(quotedEscapeChars, l.peek()) {
 				l.backup()
 				l.emitText()
@@ -271,7 +318,7 @@ func lexInsideDoubleQuotes(l *lexer) stateFunc {
 				_ = l.accept(`\`)
 				l.discard()
 
-				_ = l.next()
+				l.next()
 				l.emit(tokenEscaped)
 			}
 

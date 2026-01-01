@@ -19,6 +19,7 @@ const (
 	tokenAppend
 	tokenPipeline
 	tokenAmpersand
+	tokenVariable
 )
 
 type token struct {

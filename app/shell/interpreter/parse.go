@@ -14,30 +14,34 @@ var (
 	ErrCommandNotFound = errors.New("command not found")
 )
 
-func Parse(input string, cmdLookup CommandLookuper) (*Program, error) {
+func Parse(input string, cmdLookup registry, getEnv getEnvFunc) (*Program, error) {
 	l := newLexer(input)
-	p := newParser(l, cmdLookup)
+	p := newParser(l, cmdLookup, getEnv)
 	prog := p.parse()
 	return prog, p.err
 }
 
-type CommandLookuper interface {
+type registry interface {
 	LookupCommand(name string) (*cmd.Command, bool, error)
 }
 
+type getEnvFunc func(string) string
+
 type parser struct {
-	l         *lexer
-	prevToken token
-	curToken  token
-	peekToken token
-	cmdLookup CommandLookuper
-	err       error
+	l          *lexer
+	prevToken  token
+	curToken   token
+	peekToken  token
+	cmdLookup  registry
+	getEnvFunc getEnvFunc
+	err        error
 }
 
-func newParser(l *lexer, cmdLookup CommandLookuper) *parser {
+func newParser(l *lexer, cmdLookup registry, getEnv getEnvFunc) *parser {
 	p := &parser{
-		l:         l,
-		cmdLookup: cmdLookup,
+		l:          l,
+		cmdLookup:  cmdLookup,
+		getEnvFunc: getEnv,
 	}
 	return p
 }
@@ -129,7 +133,7 @@ func (p *parser) parseCommands() []*programCommand {
 
 func (p *parser) parseCommand() *programCommand {
 	pc := &programCommand{
-		args: []argument{},
+		args: []StringNode{},
 	}
 
 	for p.isCurToken(tokenSpace) {
@@ -143,7 +147,7 @@ func (p *parser) parseCommand() *programCommand {
 	case tokenSingleQuote:
 		cmdName = p.parseSingleQuotes().literal
 	case tokenDoubleQuote:
-		cmdName = p.parseDoubleQuotes().literal
+		cmdName, _ = p.parseDoubleQuotes().String()
 	default:
 		p.errorf("unsupported token type for command name: %q", p.curToken.typ)
 		return nil
@@ -165,17 +169,22 @@ Loop:
 		switch p.curToken.typ {
 		case tokenText, tokenSpace, tokenEscaped:
 			node := p.parseText()
-			if len(node.literal) > 0 {
+			if node != nil && len(node.literal) > 0 {
 				pc.args = append(pc.args, node)
 			}
 		case tokenSingleQuote:
 			node := p.parseSingleQuotes()
-			if len(node.literal) > 0 {
+			if node != nil && len(node.literal) > 0 {
 				pc.args = append(pc.args, node)
 			}
 		case tokenDoubleQuote:
 			node := p.parseDoubleQuotes()
-			if len(node.literal) > 0 {
+			if node != nil && len(node.parts) > 0 {
+				pc.args = append(pc.args, node)
+			}
+		case tokenVariable:
+			node := p.parseVariable()
+			if node != nil {
 				pc.args = append(pc.args, node)
 			}
 		case tokenRedirect:
@@ -190,6 +199,23 @@ Loop:
 	}
 
 	return pc
+}
+
+func (p *parser) parseVariable() *variable {
+	assert.Assert(p.isCurToken(tokenVariable))
+
+	v := &variable{
+		literal: p.curToken.literal,
+		lookup:  p.getEnvFunc,
+	}
+
+	p.nextToken()
+
+	if len(v.literal) <= 1 {
+		p.errorf("inavlid variable usage")
+	}
+
+	return v
 }
 
 func (p *parser) parseRedirect(pc *programCommand) {
@@ -227,7 +253,7 @@ func (p *parser) parseRedirect(pc *programCommand) {
 		}
 	case tokenDoubleQuote:
 		if node := p.parseDoubleQuotes(); node != nil {
-			file.filename = node.literal
+			file.filename, _ = node.String()
 		}
 	default:
 		p.errorf("expected filename after redirect token but got %s", p.peekToken.typ)
@@ -269,7 +295,7 @@ func (p *parser) parseAppend(pc *programCommand) {
 		}
 	case tokenDoubleQuote:
 		if node := p.parseDoubleQuotes(); node != nil {
-			file.filename = node.literal
+			file.filename, _ = node.String()
 		}
 	default:
 		p.errorf("expected filename after append token but got %s", p.peekToken.typ)
@@ -336,24 +362,30 @@ Loop:
 
 func (p *parser) parseDoubleQuotes() *doubleQuotedText {
 	assert.Assert(p.isCurToken(tokenDoubleQuote))
+	p.nextToken()
 
-	node := &doubleQuotedText{}
-	builder := strings.Builder{}
+	node := &doubleQuotedText{
+		parts: make([]StringNode, 0),
+	}
 
 Loop:
 	for {
-		switch p.peekToken.typ {
+		switch p.curToken.typ {
 		case tokenText, tokenEscaped:
-			p.nextToken()
-			_, _ = builder.WriteString(p.curToken.literal)
+			rt := p.parseText()
+			node.parts = append(node.parts, rt)
+		case tokenVariable:
+			v := p.parseVariable()
+			node.parts = append(node.parts, v)
 		case tokenDoubleQuote:
-			p.nextToken()
 			if p.tryPeek(tokenDoubleQuote) {
-				_, _ = builder.WriteString(p.parseDoubleQuotes().literal)
+				dq := p.parseDoubleQuotes()
+				node.parts = append(node.parts, dq)
 			}
 
 			if p.tryPeek(tokenText) {
-				_, _ = builder.WriteString(p.parseText().literal)
+				rt := p.parseText()
+				node.parts = append(node.parts, rt)
 			} else {
 				p.nextToken()
 			}
@@ -363,6 +395,5 @@ Loop:
 		}
 	}
 
-	node.literal = builder.String()
 	return node
 }

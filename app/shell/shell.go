@@ -139,7 +139,7 @@ func (s *Shell) repl() {
 
 		s.HistoryContext.Add(input)
 
-		prog, err := interpreter.Parse(input, s)
+		prog, err := interpreter.Parse(input, s, s.Env.Get)
 		if err != nil {
 			if errors.Is(err, interpreter.ErrCommandNotFound) {
 				_, _ = fmt.Fprintln(s.Stdout, err)
