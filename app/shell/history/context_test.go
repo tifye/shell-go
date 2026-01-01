@@ -27,6 +27,9 @@ func TestHistoryContextBack(t *testing.T) {
 	assert.Equal(t, "1", item)
 	assert.True(t, ok)
 
+	_, ok = hctx.Back()
+	assert.False(t, ok)
+
 	item, ok = hctx.Forward()
 	assert.Equal(t, "2", item)
 	assert.True(t, ok)

@@ -27,7 +27,7 @@ func (h *HistoryContext) Back() (string, bool) {
 		return "", false
 	}
 
-	ok := h.forwardIdx() <= h.Len()-1
+	ok := h.backIdx() <= h.Len()-1
 	if !ok {
 		return "", false
 	}
