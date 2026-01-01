@@ -1,27 +1,17 @@
-echo meep
-echo mino
+echo 1
+echo 2
 history 2
 exit
-history 3
-exit
-exit
-exit
+history
 history 2
-isotry
 history
-history 5
-exit
-history 4
+hiso
+history 2
 exit
 history
+history 2
 exit
 history
-exit
-history
-e
-history 4
-exit
-history
-exit
-history
-exit
+e
+history 2
+gi

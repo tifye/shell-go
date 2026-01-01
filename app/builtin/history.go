@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"slices"
 	"strconv"
 
 	"github.com/codecrafters-io/shell-starter-go/app/cmd"
@@ -64,12 +65,18 @@ func NewHistoryCommand(historyCtx *history.HistoryContext, fsys OpenFileFS) *cmd
 }
 
 func printHistory(h term.History, w io.Writer, n int) error {
-	offset := h.Len() - n
+	latest := make([]string, 0, n)
 	for i := range n {
-		item := []byte(h.At(h.Len() - i - 1))
-		if _, err := fmt.Fprintf(w, "  %d  %s\n", offset+i+1, item); err != nil {
-			return err
-		}
+		item := h.At(i)
+		latest = append(latest, item)
 	}
+
+	slices.Reverse(latest)
+
+	offset := h.Len() - n
+	for i, item := range latest {
+		_, _ = fmt.Fprintf(w, "  %d %s\n", offset+i+1, item)
+	}
+
 	return nil
 }
