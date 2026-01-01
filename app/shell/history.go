@@ -20,53 +20,52 @@ type historyOptions struct {
 	readFilename   string
 	writeFilename  string
 	appendFilename string
+	n              string
 }
 
-func NewHistoryCommand(historyCtx *history.HistoryContext, fsys OpenFileFS) *cmd.Command {
-	return &cmd.Command{
-		Name: "history",
-		Run: func(cmd *cmd.Command, args []string) error {
-
-			opts := &historyOptions{}
-			flagset := flag.NewFlagSet("history", flag.ExitOnError)
-			flagset.StringVar(&opts.readFilename, "r", "", "Path to file from which to read history entries")
-			flagset.StringVar(&opts.writeFilename, "w", "", "Path to file to which to write history entries")
-			flagset.StringVar(&opts.appendFilename, "a", "", "Path to file to which to append history entries")
-			if err := flagset.Parse(args[1:]); err != nil {
-				return fmt.Errorf("parsing args: %w", err)
-			}
-			args = flagset.Args()
-
-			switch {
-			case len(opts.readFilename) > 0:
-				return history.ReadHistoryFromFile(historyCtx, fsys, opts.readFilename)
-			case len(opts.writeFilename) > 0:
-				return history.WriteHistoryToFile(historyCtx, fsys, opts.writeFilename)
-			case len(opts.appendFilename) > 0:
-				return history.AppendHistoryToFile(historyCtx, fsys, opts.appendFilename)
-			default:
-				numItems := historyCtx.Len()
-				if nArg := flagset.Arg(0); flagset.NArg() > 0 {
-					nParsed, err := strconv.Atoi(nArg)
-					if err != nil {
-						return fmt.Errorf("expected integer argument")
-					}
-					if nParsed < numItems {
-						numItems = nParsed
-					}
+func NewHistoryCommandFunc(hctx *history.HistoryContext, fsys OpenFileFS) cmd.CommandFunc {
+	return func() *cmd.Command {
+		return &cmd.Command{
+			Name: "history",
+			Run: func(cmd *cmd.Command, args []string) error {
+				opts := &historyOptions{}
+				flagset := flag.NewFlagSet("history", flag.ExitOnError)
+				flagset.StringVar(&opts.readFilename, "r", "", "Path to file from which to read history entries")
+				flagset.StringVar(&opts.writeFilename, "w", "", "Path to file to which to write history entries")
+				flagset.StringVar(&opts.appendFilename, "a", "", "Path to file to which to append history entries")
+				if err := flagset.Parse(args[1:]); err != nil {
+					return fmt.Errorf("parsing args: %w", err)
 				}
-				if numItems == 0 {
-					return nil
-				}
-				return printHistory(historyCtx, cmd.Stdout, numItems)
-			}
-		},
+				args = flagset.Args()
+				return runHistory(cmd.Stdout, opts, hctx, fsys)
+			},
+		}
 	}
 }
 
-func NewHistoryCommandFunc(historyCtx *history.HistoryContext, fsys OpenFileFS) cmd.CommandFunc {
-	return func() *cmd.Command {
-		return NewHistoryCommand(historyCtx, fsys)
+func runHistory(w io.Writer, opts *historyOptions, hctx *history.HistoryContext, fsys OpenFileFS) error {
+	switch {
+	case len(opts.readFilename) > 0:
+		return history.ReadHistoryFromFile(hctx, fsys, opts.readFilename)
+	case len(opts.writeFilename) > 0:
+		return history.WriteHistoryToFile(hctx, fsys, opts.writeFilename)
+	case len(opts.appendFilename) > 0:
+		return history.AppendHistoryToFile(hctx, fsys, opts.appendFilename)
+	default:
+		numItems := hctx.Len()
+		if len(opts.n) > 0 {
+			nParsed, err := strconv.Atoi(opts.n)
+			if err != nil {
+				return fmt.Errorf("expected integer argument")
+			}
+			if nParsed < numItems {
+				numItems = nParsed
+			}
+		}
+		if numItems == 0 {
+			return nil
+		}
+		return printHistory(hctx, w, numItems)
 	}
 }
 
