@@ -33,6 +33,9 @@ func (p *Program) runCommand(pc *Command) error {
 	if err != nil {
 		return fmt.Errorf("evaluating command name: %w", err)
 	}
+	if len(cmdName) == 0 {
+		return fmt.Errorf("%s: %w", cmdName, ErrCommandNotFound)
+	}
 
 	cmd, found, err := p.CommandLookupFunc(cmdName)
 	if err != nil {

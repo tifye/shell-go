@@ -142,7 +142,9 @@ func (p *parser) parseCommand() (pc *Command) {
 	}
 
 	switch p.curToken.typ {
-	case tokenText:
+	case tokenVariable:
+		pc.name = p.parseVariable()
+	case tokenText, tokenEscaped:
 		pc.name = p.parseText()
 	case tokenSingleQuote:
 		pc.name = p.parseSingleQuotes()
