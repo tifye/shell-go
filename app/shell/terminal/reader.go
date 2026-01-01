@@ -18,6 +18,7 @@ const (
 	keyCtrlU = 21
 	keyEnter = '\r'
 	keyLF    = '\n'
+	keyTab   = '\t'
 
 	keyEscape byte = 0x1B // 27
 	// Control Sequence Introducer
@@ -56,6 +57,7 @@ const (
 	ItemKeyUp
 	ItemKeyDown
 	ItemKeyCtrlC
+	ItemKeyTab
 	ItemKeyUnknown
 )
 
@@ -81,6 +83,10 @@ func NewTermReader(r io.Reader, tw *TermWriter) *TermReader {
 		r:  r,
 		tw: tw,
 	}
+}
+
+func (t *TermReader) Line() string {
+	return string(t.line)
 }
 
 func (t *TermReader) NextItem() Item {
@@ -223,6 +229,8 @@ func handleKey(t *TermReader) stateFunc {
 	t.advanceView(size)
 
 	switch key {
+	case keyTab:
+		return t.emit(ItemKeyTab, string(key))
 	case keyEnter, keyLF:
 		return handleEnterKey
 	default:

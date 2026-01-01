@@ -66,6 +66,22 @@ func (r *Registry) LookupCommand(name string) (*Command, bool) {
 	return nil, false
 }
 
+func (r *Registry) MatchFirst(prefix string) (string, bool) {
+	for k := range r.builtins {
+		if strings.HasPrefix(k, prefix) {
+			return k, true
+		}
+	}
+
+	for k := range r.path {
+		if strings.HasPrefix(k, prefix) {
+			return k, true
+		}
+	}
+
+	return "", false
+}
+
 type commandMap map[string]CommandFunc
 
 func (m commandMap) Lookup(name string) (CommandFunc, bool) {

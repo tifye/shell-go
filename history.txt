@@ -15,3 +15,11 @@ history
 e
 history 2
 gi
+
+r
+fd
+exit
+mino
+choice
+chrono
+exit

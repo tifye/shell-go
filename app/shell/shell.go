@@ -42,6 +42,8 @@ type Shell struct {
 	HistoryContext  *history.HistoryContext
 	CommandRegistry *cmd.Registry
 
+	autocompleter *autocompleter
+
 	tr *terminal.TermReader
 	tw *terminal.TermWriter
 }
@@ -83,6 +85,10 @@ func (s *Shell) Run() error {
 		registry.AddBuiltinCommand("exit", NewExitCommandFunc())
 
 		s.CommandRegistry = registry
+	}
+
+	s.autocompleter = &autocompleter{
+		registry: s.CommandRegistry,
 	}
 
 	if histFile := s.Env.Get("HISTFILE"); len(histFile) > 0 {
@@ -157,6 +163,11 @@ func (s *Shell) read() (string, error) {
 			return "", ErrExit
 		case terminal.ItemLineInput:
 			return item.Literal, nil
+		case terminal.ItemKeyTab:
+			line, ok := s.autocompleter.Complete(s.tr.Line())
+			if ok {
+				s.tr.ReplaceWith("$ " + line)
+			}
 		default:
 			fmt.Println("default")
 		}
