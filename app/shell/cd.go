@@ -23,7 +23,7 @@ func NewCDCommandFunc(s *Shell) cmd.CommandFunc {
 				}
 				target, err := s.FullPathFunc(target)
 				if err != nil {
-					return fmt.Errorf("failed to get full path of %q: %w\n", args[1], err)
+					return fmt.Errorf("failed to get full path of %q: %w\n", target, err)
 				}
 
 				f, err := s.FS.OpenFile(target, os.O_RDONLY)
