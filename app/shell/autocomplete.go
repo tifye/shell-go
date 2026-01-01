@@ -30,7 +30,7 @@ func (a *autocompleter) Complete(input string) (string, bool) {
 		return "", false
 	}
 
-	if len(matches) > 0 {
+	if len(matches) > 1 {
 		a.PossibleCompletions(matches)
 	}
 
