@@ -36,7 +36,7 @@ func NewHistoryCommandFunc(hctx *history.HistoryContext, fsys OpenFileFS) cmd.Co
 				if err := flagset.Parse(args[1:]); err != nil {
 					return fmt.Errorf("parsing args: %w", err)
 				}
-				args = flagset.Args()
+				opts.n = flagset.Arg(0)
 				return runHistory(cmd.Stdout, opts, hctx, fsys)
 			},
 		}
