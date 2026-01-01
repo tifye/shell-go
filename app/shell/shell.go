@@ -89,7 +89,13 @@ func (s *Shell) Run() error {
 
 	s.autocompleter = &autocompleter{
 		registry: s.CommandRegistry,
-		w:        s.tw,
+		RingTheBell: func() {
+			s.tw.Write([]byte{0x07})
+		},
+		PossibleCompletions: func(p []string) {
+			fmt.Fprintf(s.Stdout, "\n%s\n", strings.Join(p, "  "))
+			fmt.Fprintf(s.Stdout, "$ %s", s.tr.Line())
+		},
 	}
 
 	if histFile := s.Env.Get("HISTFILE"); len(histFile) > 0 {

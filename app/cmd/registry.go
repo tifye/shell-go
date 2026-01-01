@@ -3,6 +3,7 @@ package cmd
 import (
 	"io/fs"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 
@@ -64,6 +65,24 @@ func (r *Registry) LookupCommand(name string) (*Command, bool) {
 	}
 
 	return nil, false
+}
+
+func (r *Registry) MatchAll(reg *regexp.Regexp) []string {
+	var matches []string
+
+	for k := range r.builtins {
+		if reg.MatchString(k) {
+			matches = append(matches, k)
+		}
+	}
+
+	for k := range r.path {
+		if reg.MatchString(k) {
+			matches = append(matches, k)
+		}
+	}
+
+	return matches
 }
 
 func (r *Registry) MatchFirst(prefix string) (string, bool) {

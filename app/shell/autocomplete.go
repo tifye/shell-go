@@ -1,29 +1,37 @@
 package shell
 
 import (
-	"io"
+	"fmt"
+	"regexp"
 
 	"github.com/codecrafters-io/shell-starter-go/app/cmd"
 )
 
 type autocompleter struct {
 	registry *cmd.Registry
-	w        io.Writer
-
 	bellRung bool
+
+	RingTheBell         func()
+	PossibleCompletions func([]string)
 }
 
 func (a *autocompleter) Complete(input string) (string, bool) {
-	line, ok := a.registry.MatchFirst(input)
-	if ok {
+	escaped := regexp.QuoteMeta(input)
+	reg, _ := regexp.Compile(fmt.Sprintf("^(%s)+.*", escaped))
+	matches := a.registry.MatchAll(reg)
+	if len(matches) == 1 {
 		a.bellRung = false
-		return line, true
+		return matches[0], true
 	}
 
 	if !a.bellRung {
-		a.w.Write([]byte{0x07})
+		a.RingTheBell()
 		a.bellRung = true
 		return "", false
+	}
+
+	if len(matches) > 0 {
+		a.PossibleCompletions(matches)
 	}
 
 	return "", false
