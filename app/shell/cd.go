@@ -19,7 +19,7 @@ func NewCDCommandFunc(s *Shell) cmd.CommandFunc {
 
 				target := args[1]
 				if !os.IsPathSeparator(target[0]) {
-					target = s.WorkingDir + target
+					target = s.WorkingDir + string(os.PathSeparator) + target
 				}
 				target, err := s.FullPathFunc(target)
 				if err != nil {
