@@ -166,7 +166,7 @@ func (s *Shell) read() (string, error) {
 		case terminal.ItemKeyTab:
 			line, ok := s.autocompleter.Complete(s.tr.Line())
 			if ok {
-				s.tr.ReplaceWith("$ " + line)
+				s.tr.ReplaceWith("$ " + line + " ")
 			}
 		default:
 			fmt.Println("default")
