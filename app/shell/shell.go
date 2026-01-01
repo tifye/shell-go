@@ -153,7 +153,12 @@ func (s *Shell) repl() {
 			if errors.Is(err, ErrExit) {
 				return
 			}
-			_, _ = fmt.Fprintf(s.Stderr, "error executing: %s\n", err)
+
+			if errors.Is(err, interpreter.ErrCommandNotFound) {
+				_, _ = fmt.Fprintln(s.Stderr, err)
+			} else {
+				_, _ = fmt.Fprintf(s.Stderr, "error executing: %s\n", err)
+			}
 		}
 	}
 }
