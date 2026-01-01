@@ -165,11 +165,13 @@ func (s *Shell) read() (string, error) {
 	for {
 		switch item := s.tr.NextItem(); item.Type {
 		case terminal.ItemKeyUp:
-			item, _ := histNavCtx.Back()
-			s.tr.ReplaceWith("$ " + item)
+			if item, ok := histNavCtx.Back(); ok {
+				s.tr.ReplaceWith("$ " + item)
+			}
 		case terminal.ItemKeyDown:
-			item, _ := histNavCtx.Forward()
-			s.tr.ReplaceWith("$ " + item)
+			if item, ok := histNavCtx.Forward(); ok {
+				s.tr.ReplaceWith("$ " + item)
+			}
 		case terminal.ItemKeyCtrlC:
 			return "", ErrExit
 		case terminal.ItemLineInput:
