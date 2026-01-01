@@ -25,24 +25,31 @@ func (a *autocompleter) Complete(input string) (string, bool) {
 		return matches[0] + " ", true
 	}
 
-	if !a.bellRung {
-		a.RingTheBell()
-		a.bellRung = true
-		return "", false
-	}
-
 	if len(matches) == 0 {
+		a.ringTheBell()
 		return "", false
 	}
 
 	prefix := largestCommonPrefix(matches)
 	if prefix != input {
-		fmt.Println("---", "prefix")
 		return prefix, true
+	} else {
+		if a.ringTheBell() {
+			return "", false
+		}
 	}
 
 	a.PossibleCompletions(matches)
 	return "", false
+}
+
+func (a *autocompleter) ringTheBell() bool {
+	if a.bellRung {
+		return false
+	}
+	a.RingTheBell()
+	a.bellRung = true
+	return true
 }
 
 func largestCommonPrefix(s []string) string {
