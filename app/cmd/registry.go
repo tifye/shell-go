@@ -68,21 +68,26 @@ func (r *Registry) LookupCommand(name string) (*Command, bool) {
 }
 
 func (r *Registry) MatchAll(reg *regexp.Regexp) []string {
-	var matches []string
+	matches := map[string]struct{}{}
 
 	for k := range r.builtins {
 		if reg.MatchString(k) {
-			matches = append(matches, k)
+			matches[k] = struct{}{}
 		}
 	}
 
 	for k := range r.path {
 		if reg.MatchString(k) {
-			matches = append(matches, k)
+			matches[k] = struct{}{}
 		}
 	}
 
-	return matches
+	keys := make([]string, 0, len(matches))
+	for k := range matches {
+		keys = append(keys, k)
+	}
+
+	return keys
 }
 
 func (r *Registry) MatchFirst(prefix string) (string, bool) {
