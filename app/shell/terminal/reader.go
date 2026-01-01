@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"unicode/utf8"
 
 	"github.com/codecrafters-io/shell-starter-go/assert"
@@ -86,7 +87,8 @@ func NewTermReader(r io.Reader, tw *TermWriter) *TermReader {
 }
 
 func (t *TermReader) Line() string {
-	return string(t.line)
+	// naughty naughty
+	return strings.TrimPrefix(string(t.line), "$ ")
 }
 
 func (t *TermReader) NextItem() Item {
