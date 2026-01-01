@@ -20,17 +20,17 @@ func NewCDCommandFunc(s *Shell) cmd.CommandFunc {
 				target := args[1]
 				target, err := s.FullPathFunc(target)
 				if err != nil {
-					return fmt.Errorf("failed to get full path of %q: %w", args[1], err)
+					return fmt.Errorf("failed to get full path of %q: %w\n", args[1], err)
 				}
 
 				f, err := s.FS.OpenFile(target, os.O_RDONLY)
 				if err != nil {
-					if !errors.Is(err, os.ErrNotExist) {
-						return fmt.Errorf("failed to check target location: %s", err)
+					if errors.Is(err, os.ErrNotExist) {
+						_, err := fmt.Fprintf(cmd.Stdout, "cd: %s: No such file or directoy\n", args[1])
+						return err
 					}
 
-					_, err := fmt.Fprintf(cmd.Stdout, "cd %s: No such file or directoy", args[1])
-					return err
+					return fmt.Errorf("failed to check target location: %s\n", err)
 				}
 				_ = f.Close()
 
