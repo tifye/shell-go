@@ -7,11 +7,6 @@ import (
 	"github.com/codecrafters-io/shell-starter-go/assert"
 )
 
-type commandLookuper interface {
-	LookupBuiltinCommand(string) (*cmd.Command, bool)
-	LookupPathCommand(string) (string, *cmd.Command, bool)
-}
-
 func NewTypeCommand(registry *cmd.Registry) *cmd.Command {
 	assert.NotNil(registry, "registry")
 	return &cmd.Command{
