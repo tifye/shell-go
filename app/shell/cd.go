@@ -26,6 +26,7 @@ func NewCDCommandFunc(s *Shell) cmd.CommandFunc {
 				f, err := s.FS.OpenFile(target, os.O_RDONLY)
 				if err != nil {
 					if errors.Is(err, os.ErrNotExist) {
+						fmt.Println(target)
 						_, err := fmt.Fprintf(cmd.Stdout, "cd: %s: No such file or directory\n", args[1])
 						return err
 					}
