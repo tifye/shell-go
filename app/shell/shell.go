@@ -89,6 +89,7 @@ func (s *Shell) Run() error {
 
 	s.autocompleter = &autocompleter{
 		registry: s.CommandRegistry,
+		w:        s.tw,
 	}
 
 	if histFile := s.Env.Get("HISTFILE"); len(histFile) > 0 {
