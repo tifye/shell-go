@@ -18,6 +18,9 @@ func NewCDCommandFunc(s *Shell) cmd.CommandFunc {
 				}
 
 				target := args[1]
+				if !os.IsPathSeparator(target[0]) {
+					target = s.WorkingDir + target
+				}
 				target, err := s.FullPathFunc(target)
 				if err != nil {
 					return fmt.Errorf("failed to get full path of %q: %w\n", args[1], err)
@@ -26,7 +29,6 @@ func NewCDCommandFunc(s *Shell) cmd.CommandFunc {
 				f, err := s.FS.OpenFile(target, os.O_RDONLY)
 				if err != nil {
 					if errors.Is(err, os.ErrNotExist) {
-						fmt.Println(target)
 						_, err := fmt.Fprintf(cmd.Stdout, "cd: %s: No such file or directory\n", args[1])
 						return err
 					}
