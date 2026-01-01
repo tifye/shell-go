@@ -56,7 +56,8 @@ func (p *parser) parse() *Program {
 	p.nextToken()
 	p.nextToken()
 	prog := &Program{
-		cmds: p.parseCommands(),
+		cmds:              p.parseCommands(),
+		CommandLookupFunc: p.cmdLookup.LookupCommand,
 	}
 	return prog
 }
@@ -101,8 +102,8 @@ func (p *parser) error(err error) {
 	p.err = err
 }
 
-func (p *parser) parseCommands() []*programCommand {
-	cmds := make([]*programCommand, 0)
+func (p *parser) parseCommands() []*Command {
+	cmds := make([]*Command, 0)
 
 	var pipeIn *pipeInRedirect
 	for !p.isCurToken(tokenEOF) {
@@ -131,8 +132,8 @@ func (p *parser) parseCommands() []*programCommand {
 	return cmds
 }
 
-func (p *parser) parseCommand() *programCommand {
-	pc := &programCommand{
+func (p *parser) parseCommand() (pc *Command) {
+	pc = &Command{
 		args: []StringNode{},
 	}
 
@@ -140,31 +141,18 @@ func (p *parser) parseCommand() *programCommand {
 		p.nextToken()
 	}
 
-	cmdName := ""
 	switch p.curToken.typ {
 	case tokenText:
-		cmdName = p.parseText().literal
+		pc.name = p.parseText()
 	case tokenSingleQuote:
-		cmdName = p.parseSingleQuotes().literal
+		pc.name = p.parseSingleQuotes()
 	case tokenDoubleQuote:
-		cmdName, _ = p.parseDoubleQuotes().String()
+		pc.name = p.parseDoubleQuotes()
 	default:
 		p.errorf("unsupported token type for command name: %q", p.curToken.typ)
 		return nil
 	}
 
-	cmd, found, err := p.cmdLookup.LookupCommand(cmdName)
-	if err != nil {
-		p.errorf("failed to lookup cmd: %s", err)
-		return nil
-	}
-	if !found {
-		p.error(fmt.Errorf("%s: %w", cmdName, ErrCommandNotFound))
-		return nil
-	}
-	pc.cmd = cmd
-
-Loop:
 	for {
 		switch p.curToken.typ {
 		case tokenText, tokenSpace, tokenEscaped:
@@ -189,16 +177,14 @@ Loop:
 			}
 		case tokenRedirect:
 			p.parseRedirect(pc)
-			break Loop
+			return
 		case tokenAppend:
 			p.parseAppend(pc)
-			break Loop
+			return
 		default:
-			break Loop
+			return
 		}
 	}
-
-	return pc
 }
 
 func (p *parser) parseVariable() *variable {
@@ -218,7 +204,7 @@ func (p *parser) parseVariable() *variable {
 	return v
 }
 
-func (p *parser) parseRedirect(pc *programCommand) {
+func (p *parser) parseRedirect(pc *Command) {
 	assert.NotNil(pc)
 	assert.Assert(p.isCurToken(tokenRedirect))
 
@@ -260,7 +246,7 @@ func (p *parser) parseRedirect(pc *programCommand) {
 	}
 }
 
-func (p *parser) parseAppend(pc *programCommand) {
+func (p *parser) parseAppend(pc *Command) {
 	assert.NotNil(pc)
 	assert.Assert(p.isCurToken(tokenAppend))
 

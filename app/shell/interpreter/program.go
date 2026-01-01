@@ -13,7 +13,8 @@ import (
 )
 
 type Program struct {
-	cmds []*programCommand
+	cmds              []*Command
+	CommandLookupFunc func(string) (*cmd.Command, bool, error)
 }
 
 func (p *Program) Run() error {
@@ -21,13 +22,28 @@ func (p *Program) Run() error {
 	eg.SetLimit(len(p.cmds))
 	for _, c := range p.cmds {
 		eg.Go(func() error {
-			return runCommand(c)
+			return p.runCommand(c)
 		})
 	}
 	return eg.Wait()
 }
 
-func runCommand(pc *programCommand) error {
+func (p *Program) runCommand(pc *Command) error {
+	cmdName, err := pc.name.String()
+	if err != nil {
+		return fmt.Errorf("evaluating command name: %w", err)
+	}
+
+	cmd, found, err := p.CommandLookupFunc(cmdName)
+	if err != nil {
+		return fmt.Errorf("lookuping cmd: %s", err)
+	}
+	if !found {
+		return fmt.Errorf("%s: %w", cmdName, ErrCommandNotFound)
+	}
+
+	pc.cmd = cmd
+
 	if pc.stdIn != nil {
 		stdInReader, err := pc.stdIn.Reader()
 		if err != nil {
@@ -80,7 +96,8 @@ func runCommand(pc *programCommand) error {
 }
 
 type (
-	programCommand struct {
+	Command struct {
+		name   StringNode
 		cmd    *cmd.Command
 		stdOut commandOut
 		stdErr commandOut
@@ -117,7 +134,7 @@ type (
 	}
 )
 
-func (c programCommand) Args() ([]string, error) {
+func (c Command) Args() ([]string, error) {
 	out := make([]string, 0, len(c.args)+1)
 	out = append(out, c.cmd.Name)
 	for i := range c.args {

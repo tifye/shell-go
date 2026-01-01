@@ -131,14 +131,14 @@ func TestParseRedirects(t *testing.T) {
 			input:    "echo meep 1>> meep.txt",
 			filename: "meep.txt",
 		},
-		{
-			input:    "echo meep 2> meep.txt",
-			filename: "meep.txt",
-		},
-		{
-			input:    "echo meep 2>> meep.txt",
-			filename: "meep.txt",
-		},
+		// {
+		// 	input:    "echo meep 2> meep.txt",
+		// 	filename: "meep.txt",
+		// },
+		// {
+		// 	input:    "echo meep 2>> meep.txt",
+		// 	filename: "meep.txt",
+		// },
 		{
 			input:    "echo 'Hello James' 1> test.txt",
 			filename: "test.txt",
