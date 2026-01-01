@@ -1,4 +1,4 @@
-package builtin
+package shell
 
 import (
 	"flag"
@@ -61,6 +61,12 @@ func NewHistoryCommand(historyCtx *history.HistoryContext, fsys OpenFileFS) *cmd
 				return printHistory(historyCtx, cmd.Stdout, numItems)
 			}
 		},
+	}
+}
+
+func NewHistoryCommandFunc(historyCtx *history.HistoryContext, fsys OpenFileFS) cmd.CommandFunc {
+	return func() *cmd.Command {
+		return NewHistoryCommand(historyCtx, fsys)
 	}
 }
 

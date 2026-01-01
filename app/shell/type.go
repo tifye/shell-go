@@ -1,15 +1,19 @@
-package builtin
+package shell
 
 import (
 	"fmt"
 
 	"github.com/codecrafters-io/shell-starter-go/app/cmd"
-	"github.com/codecrafters-io/shell-starter-go/app/shell"
 	"github.com/codecrafters-io/shell-starter-go/assert"
 )
 
-func NewTypeCommand(s *shell.Shell) *cmd.Command {
-	assert.NotNil(s)
+type commandLookuper interface {
+	LookupBuiltinCommand(string) (*cmd.Command, bool)
+	LookupPathCommand(string) (string, *cmd.Command, bool)
+}
+
+func NewTypeCommand(registry *cmd.Registry) *cmd.Command {
+	assert.NotNil(registry, "registry")
 	return &cmd.Command{
 		Name: "type",
 		Run: func(cmd *cmd.Command, args []string) error {
@@ -20,12 +24,12 @@ func NewTypeCommand(s *shell.Shell) *cmd.Command {
 			}
 
 			cmdName := args[1]
-			if _, found := s.LookupBuiltinCommand(cmdName); found {
+			if _, found := registry.LookupBuiltinCommand(cmdName); found {
 				_, _ = fmt.Fprintf(cmd.Stdout, "%s is a shell builtin\n", cmdName)
 				return nil
 			}
 
-			path, _, found := s.LookupPathCommand(cmdName)
+			path, _, found := registry.LookupPathCommand(cmdName)
 			if found {
 				assert.Assert(len(path) > 0)
 				_, _ = fmt.Fprintf(cmd.Stdout, "%s is %s\n", cmdName, path)
@@ -35,5 +39,11 @@ func NewTypeCommand(s *shell.Shell) *cmd.Command {
 			fmt.Fprintf(cmd.Stdout, "%s: not found\n", cmdName)
 			return nil
 		},
+	}
+}
+
+func NewTypeCommandFunc(r *cmd.Registry) cmd.CommandFunc {
+	return func() *cmd.Command {
+		return NewTypeCommand(r)
 	}
 }

@@ -4,7 +4,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/codecrafters-io/shell-starter-go/app/builtin"
 	"github.com/codecrafters-io/shell-starter-go/app/shell"
 	"github.com/codecrafters-io/shell-starter-go/app/shell/history"
 	"golang.org/x/term"
@@ -26,24 +25,24 @@ func run() {
 	hist := history.NewInMemoryHistory()
 	histCtx := history.NewHistoryContext(hist)
 	fsys := gofs{}
-	shell := &shell.Shell{
-		Stdout:     os.Stdout,
-		Stderr:     os.Stderr,
-		Stdin:      os.Stdin,
-		Env:        goenv{},
-		FS:         fsys,
-		Exec:       goexec,
-		HistoryCtx: histCtx,
-		FullPath:   filepath.Abs,
+	s := &shell.Shell{
+		Stdout:         os.Stdout,
+		Stderr:         os.Stderr,
+		Stdin:          os.Stdin,
+		Env:            goenv{},
+		FS:             fsys,
+		Exec:           goexec,
+		HistoryContext: histCtx,
+		FullPath:       filepath.Abs,
 	}
 
-	shell.AddBuiltins(
-		builtin.NewExitCommand(shell),
-		builtin.NewEchoCommand(),
-		builtin.NewTypeCommand(shell),
-		builtin.NewHistoryCommand(histCtx, fsys),
-	)
-	if err := shell.Run(); err != nil {
+	// s.AddBuiltins(
+	// 	shell.NewExitCommand(),
+	// 	shell.NewEchoCommand(),
+	// 	shell.NewTypeCommand(s, s.CommandRegistry),
+	// 	shell.NewHistoryCommand(histCtx, fsys),
+	// )
+	if err := s.Run(); err != nil {
 		panic(err)
 	}
 }

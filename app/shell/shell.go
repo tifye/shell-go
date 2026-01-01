@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"path/filepath"
 	"strings"
 
 	"github.com/codecrafters-io/shell-starter-go/app/cmd"
@@ -25,14 +24,6 @@ type env interface {
 	Get(string) string
 }
 
-type History interface {
-	Push(string) error
-	Next() (string, error)
-	Previous() (string, error)
-	Dump(n int) []string
-	Size() int64
-}
-
 type FS interface {
 	fs.ReadDirFS
 	OpenFile(string, int) (io.ReadWriteCloser, error)
@@ -48,10 +39,25 @@ type Shell struct {
 	Exec     func(cmd *cmd.Command, path string, args []string) error
 	FullPath func(string) (string, error)
 
-	HistoryCtx *history.HistoryContext
+	HistoryContext  *history.HistoryContext
+	CommandRegistry *cmd.Registry
 
 	tr *terminal.TermReader
 	tw *terminal.TermWriter
+}
+
+func (s *Shell) buildPathCommandFunc(exec, path string) cmd.CommandFunc {
+	return func() *cmd.Command {
+		return &cmd.Command{
+			Name:   exec,
+			Stdout: s.Stdout,
+			Stderr: s.Stderr,
+			Stdin:  s.Stdin,
+			Run: func(cmd *cmd.Command, args []string) error {
+				return s.Exec(cmd, path, args)
+			},
+		}
+	}
 }
 
 func (s *Shell) Run() error {
@@ -64,8 +70,23 @@ func (s *Shell) Run() error {
 	s.Stdout = s.tw
 	s.Stderr = s.tw
 
+	if s.CommandRegistry == nil {
+		registry, err := cmd.LoadFromPathEnv(s.Env.Get("PATH"), s.FS, s.FullPath, s.buildPathCommandFunc)
+		if err != nil {
+			fmt.Fprintf(s.Stderr, "failed to load commands from PATH; %s\n", err)
+			registry = cmd.NewResitry(s.buildPathCommandFunc)
+		}
+
+		registry.AddBuiltinCommand("type", NewTypeCommandFunc(registry))
+		registry.AddBuiltinCommand("echo", NewEchoCommandFunc())
+		registry.AddBuiltinCommand("history", NewHistoryCommandFunc(s.HistoryContext, s.FS))
+		registry.AddBuiltinCommand("exit", NewExitCommandFunc())
+
+		s.CommandRegistry = registry
+	}
+
 	if histFile := s.Env.Get("HISTFILE"); len(histFile) > 0 {
-		err := history.ReadHistoryFromFile(s.HistoryCtx, s.FS, s.Env.Get("HISTFILE"))
+		err := history.ReadHistoryFromFile(s.HistoryContext, s.FS, s.Env.Get("HISTFILE"))
 		if err != nil {
 			fmt.Fprintf(s.Stderr, "failed to load command history: %s\n", err)
 		}
@@ -75,26 +96,31 @@ func (s *Shell) Run() error {
 		if len(histFile) <= 0 {
 			return
 		}
-		err := history.AppendHistoryToFile(s.HistoryCtx, s.FS, s.Env.Get("HISTFILE"))
+		err := history.AppendHistoryToFile(s.HistoryContext, s.FS, s.Env.Get("HISTFILE"))
 		if err != nil {
 			fmt.Fprintf(s.Stderr, "failed to save command history: %s\n", err)
 		}
 	}()
 
+	s.repl()
+	return nil
+}
+
+func (s *Shell) repl() {
 	for {
 		fmt.Fprint(s.Stdout, "$ ")
 
 		input, err := s.read()
 		if err != nil {
 			if errors.Is(err, ErrExit) {
-				return nil
+				return
 			}
 			_, _ = fmt.Fprintf(s.Stdout, "error reading input: %s\n", err)
-			return nil
+			return
 		}
 		input = strings.TrimPrefix(input, "$ ")
 
-		s.HistoryCtx.Add(input)
+		s.HistoryContext.Add(input)
 
 		prog, err := interpreter.Parse(input, s)
 		if err != nil {
@@ -108,7 +134,7 @@ func (s *Shell) Run() error {
 
 		if err := prog.Run(); err != nil {
 			if errors.Is(err, ErrExit) {
-				return nil
+				return
 			}
 			_, _ = fmt.Fprintf(s.Stderr, "error executing: %s\n", err)
 		}
@@ -117,7 +143,7 @@ func (s *Shell) Run() error {
 
 func (s *Shell) read() (string, error) {
 	// Not exactly optimal but works for now
-	histNavCtx := history.NewHistoryContext(s.HistoryCtx.History)
+	histNavCtx := history.NewHistoryContext(s.HistoryContext.History)
 
 	for {
 		switch item := s.tr.NextItem(); item.Type {
@@ -137,126 +163,18 @@ func (s *Shell) read() (string, error) {
 	}
 }
 
-func (s *Shell) AddBuiltins(commands ...*cmd.Command) {
-	assert.NotNil(commands)
-
-	if s.builtins == nil {
-		s.builtins = make([]*cmd.Command, 0, len(commands))
-	}
-
-	for _, cmd := range commands {
-		// Ok, small loop
-		_, found := s.LookupBuiltinCommand(cmd.Name)
-		if !found {
-			s.builtins = append(s.builtins, cmd)
-		}
-	}
-}
-
-func (s *Shell) LookupBuiltinCommand(name string) (*cmd.Command, bool) {
+func (s *Shell) LookupCommand(name string) (cmd *cmd.Command, found bool, err error) {
 	assert.Assert(len(name) > 0)
 
-	for _, c := range s.builtins {
-		if strings.EqualFold(c.Name, name) {
-			c.Stdin = s.Stdin
-			c.Stdout = s.Stdout
-			c.Stderr = s.Stderr
-			return c, true
-		}
-	}
-	return nil, false
-}
-
-func (s *Shell) LookupPathCommand(name string) (string, *cmd.Command, bool) {
-	assert.Assert(len(name) > 0)
-	assert.NotNil(s.Env)
-	assert.NotNil(s.Exec)
-
-	path := s.Env.Get("PATH")
-	if len(path) == 0 {
-		return "", nil, false
+	cmd, found = s.CommandRegistry.LookupCommand(name)
+	if !found {
+		return nil, false, nil
 	}
 
-	paths := filepath.SplitList(path)
-	for _, p := range paths {
-		// todo: what to do with error?
-		if len(p) == 0 {
-			continue
-		}
-		exePath, found, err := s.lookupExecutableInDir(p, name)
-		if err != nil {
-			return "", nil, false
-		}
-		if found {
-			cmd := &cmd.Command{
-				Name:   name,
-				Stdout: s.Stdout,
-				Stderr: s.Stderr,
-				Stdin:  s.Stdin,
-				Run: func(cmd *cmd.Command, args []string) error {
-					return s.Exec(cmd, exePath, args)
-				},
-			}
-			return exePath, cmd, true
-		}
-	}
+	assert.NotNil(cmd, "cmd")
+	cmd.Stdin = s.Stdin
+	cmd.Stderr = s.Stderr
+	cmd.Stdout = s.Stdout
 
-	return "", nil, false
-}
-
-func (s *Shell) lookupExecutableInDir(dir string, exeName string) (exePath string, found bool, err error) {
-	assert.Assert(len(dir) > 0)
-	assert.Assert(len(exeName) > 0)
-
-	dir, _ = s.FullPath(dir)
-
-	// todo: not optimal when reading large dirs
-	// todo: what to do with error?
-	err = fs.WalkDir(s.FS, dir, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return nil
-		}
-
-		if path == dir {
-			return nil
-		}
-
-		if d.IsDir() {
-			return fs.SkipDir
-		}
-
-		fname := d.Name()
-		fname = strings.TrimSuffix(fname, filepath.Ext(fname))
-		if fname != exeName {
-			return nil
-		}
-
-		fi, _ := d.Info()
-		if hasExecPerms(fi.Mode().Perm()) {
-			exePath = path
-			found = true
-			return fs.SkipAll
-		}
-
-		return nil
-	})
-
-	return exePath, found, err
-}
-
-func (s *Shell) LookupCommand(name string) (*cmd.Command, bool, error) {
-	assert.Assert(len(name) > 0)
-
-	cmd, found := s.LookupBuiltinCommand(name)
-	if found {
-		assert.NotNil(cmd)
-		return cmd, true, nil
-	}
-
-	_, cmd, found = s.LookupPathCommand(name)
-	if found {
-		return cmd, true, nil
-	}
-
-	return nil, false, nil
+	return
 }
