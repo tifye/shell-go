@@ -19,6 +19,7 @@ func (a *autocompleter) Complete(input string) (string, bool) {
 	escaped := regexp.QuoteMeta(input)
 	reg, _ := regexp.Compile(fmt.Sprintf("^(%s)+.*", escaped))
 	matches := a.registry.MatchAll(reg)
+	fmt.Println(matches)
 	if len(matches) == 1 {
 		a.bellRung = false
 		return matches[0], true
