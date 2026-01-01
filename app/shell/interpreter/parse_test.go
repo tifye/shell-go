@@ -62,8 +62,8 @@ func TestParseSingleCommands(t *testing.T) {
 			expectedArgs: []string{`one\two`},
 		},
 		{
-			input:        `\'one\'`,
-			expectedArgs: []string{`'one'`},
+			input:        `echo \'one\'`,
+			expectedArgs: []string{`echo`, `'one'`},
 		},
 		{
 			input:        `one \'\"two three\"\'`,

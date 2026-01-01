@@ -35,13 +35,6 @@ func run() {
 		HistoryContext: histCtx,
 		FullPath:       filepath.Abs,
 	}
-
-	// s.AddBuiltins(
-	// 	shell.NewExitCommand(),
-	// 	shell.NewEchoCommand(),
-	// 	shell.NewTypeCommand(s, s.CommandRegistry),
-	// 	shell.NewHistoryCommand(histCtx, fsys),
-	// )
 	if err := s.Run(); err != nil {
 		panic(err)
 	}
