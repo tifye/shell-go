@@ -17,9 +17,10 @@ func NewInMemoryHistory() *InMemoryHistory {
 
 func (h *InMemoryHistory) Add(item string) {
 	if len(h.history) > 0 {
-		if h.history[len(h.history)-1] == item {
-			return
-		}
+		// todo: temp for codecrafters
+		// if h.history[len(h.history)-1] == item {
+		// 	return
+		// }
 	}
 	h.history = append(h.history, item)
 }
