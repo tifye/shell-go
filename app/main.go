@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"syscall"
 
 	"github.com/codecrafters-io/shell-starter-go/app/shell"
 	"github.com/codecrafters-io/shell-starter-go/app/shell/history"
@@ -22,18 +23,19 @@ func run() {
 	}
 	defer term.Restore(fd, oldState)
 
-	hist := history.NewInMemoryHistory()
-	histCtx := history.NewHistoryContext(hist)
-	fsys := gofs{}
+	hctx := history.NewHistoryContext(history.NewInMemoryHistory())
+	workingDir, _ := syscall.Getwd()
+
 	s := &shell.Shell{
 		Stdout:         os.Stdout,
 		Stderr:         os.Stderr,
 		Stdin:          os.Stdin,
 		Env:            goenv{},
-		FS:             fsys,
-		Exec:           goexec,
-		HistoryContext: histCtx,
-		FullPath:       filepath.Abs,
+		FS:             gofs{},
+		HistoryContext: hctx,
+		ExecFunc:       goexec,
+		FullPathFunc:   filepath.Abs,
+		WorkingDir:     workingDir,
 	}
 	if err := s.Run(); err != nil {
 		panic(err)

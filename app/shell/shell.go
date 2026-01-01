@@ -30,14 +30,16 @@ type FS interface {
 }
 
 type Shell struct {
-	Stdout   io.Writer
-	Stderr   io.Writer
-	Stdin    io.Reader
-	builtins []*cmd.Command
-	Env      env
-	FS       FS
-	Exec     func(cmd *cmd.Command, path string, args []string) error
-	FullPath func(string) (string, error)
+	Stdout       io.Writer
+	Stderr       io.Writer
+	Stdin        io.Reader
+	builtins     []*cmd.Command
+	Env          env
+	FS           FS
+	ExecFunc     func(cmd *cmd.Command, path string, args []string) error
+	FullPathFunc func(string) (string, error)
+
+	WorkingDir string
 
 	HistoryContext  *history.HistoryContext
 	CommandRegistry *cmd.Registry
@@ -56,7 +58,7 @@ func (s *Shell) buildPathCommandFunc(exec, path string) cmd.CommandFunc {
 			Stderr: s.Stderr,
 			Stdin:  s.Stdin,
 			Run: func(cmd *cmd.Command, args []string) error {
-				return s.Exec(cmd, path, args)
+				return s.ExecFunc(cmd, path, args)
 			},
 		}
 	}
@@ -73,7 +75,7 @@ func (s *Shell) Run() error {
 	s.Stderr = s.tw
 
 	if s.CommandRegistry == nil {
-		registry, err := cmd.LoadFromPathEnv(s.Env.Get("PATH"), s.FS, s.FullPath, s.buildPathCommandFunc)
+		registry, err := cmd.LoadFromPathEnv(s.Env.Get("PATH"), s.FS, s.FullPathFunc, s.buildPathCommandFunc)
 		if err != nil {
 			fmt.Fprintf(s.Stderr, "failed to load commands from PATH; %s\n", err)
 			registry = cmd.NewResitry(s.buildPathCommandFunc)
@@ -83,6 +85,8 @@ func (s *Shell) Run() error {
 		registry.AddBuiltinCommand("echo", NewEchoCommandFunc())
 		registry.AddBuiltinCommand("history", NewHistoryCommandFunc(s.HistoryContext, s.FS))
 		registry.AddBuiltinCommand("exit", NewExitCommandFunc())
+		registry.AddBuiltinCommand("pwd", NewPWDCommandFunc(s))
+		registry.AddBuiltinCommand("cd", NewCDCommandFunc(s))
 
 		s.CommandRegistry = registry
 	}
