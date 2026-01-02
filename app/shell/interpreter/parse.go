@@ -133,9 +133,7 @@ func (p *parser) parseCommands() []*Command {
 }
 
 func (p *parser) parseCommand() (pc *Command) {
-	pc = &Command{
-		Arguments: []StringNode{},
-	}
+	pc = &Command{}
 
 	for p.isCurToken(tokenSpace) {
 		p.nextToken()
@@ -155,34 +153,48 @@ func (p *parser) parseCommand() (pc *Command) {
 		return nil
 	}
 
+	pc.Args = p.parseArguments()
+
 	for {
 		switch p.curToken.typ {
-		case tokenText, tokenSpace, tokenEscaped:
-			node := p.parseText()
-			if node != nil && len(node.Literal) > 0 {
-				pc.Arguments = append(pc.Arguments, node)
-			}
-		case tokenSingleQuote:
-			node := p.parseSingleQuotes()
-			if node != nil && len(node.Literal) > 0 {
-				pc.Arguments = append(pc.Arguments, node)
-			}
-		case tokenDoubleQuote:
-			node := p.parseDoubleQuotes()
-			if node != nil && len(node.Nodes) > 0 {
-				pc.Arguments = append(pc.Arguments, node)
-			}
-		case tokenVariable:
-			node := p.parseVariable()
-			if node != nil {
-				pc.Arguments = append(pc.Arguments, node)
-			}
 		case tokenRedirect:
 			p.parseRedirect(pc)
 			return
 		case tokenAppend:
 			p.parseAppend(pc)
 			return
+		default:
+			return
+		}
+	}
+}
+
+func (p *parser) parseArguments() (a *Arguments) {
+	a = &Arguments{
+		Args: make([]StringExpr, 0),
+	}
+	for {
+		switch p.curToken.typ {
+		case tokenText, tokenSpace, tokenEscaped:
+			node := p.parseText()
+			if node != nil && len(node.Literal) > 0 {
+				a.Args = append(a.Args, node)
+			}
+		case tokenSingleQuote:
+			node := p.parseSingleQuotes()
+			if node != nil && len(node.Literal) > 0 {
+				a.Args = append(a.Args, node)
+			}
+		case tokenDoubleQuote:
+			node := p.parseDoubleQuotes()
+			if node != nil && len(node.Nodes) > 0 {
+				a.Args = append(a.Args, node)
+			}
+		case tokenVariable:
+			node := p.parseVariable()
+			if node != nil {
+				a.Args = append(a.Args, node)
+			}
 		default:
 			return
 		}
@@ -353,7 +365,7 @@ func (p *parser) parseDoubleQuotes() *DoubleQuotedText {
 	p.nextToken()
 
 	node := &DoubleQuotedText{
-		Nodes: make([]StringNode, 0),
+		Nodes: make([]StringExpr, 0),
 	}
 
 Loop:

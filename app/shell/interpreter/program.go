@@ -30,7 +30,7 @@ func (p *Program) Run() error {
 }
 
 func (p *Program) runCommand(pc *Command) error {
-	cmdName, err := pc.Name.String()
+	cmdName, err := pc.Name.Expand()
 	if err != nil {
 		return fmt.Errorf("evaluating command name: %w", err)
 	}
@@ -49,7 +49,7 @@ func (p *Program) runCommand(pc *Command) error {
 	pc.cmd = cmd
 
 	if pc.stdIn != nil {
-		stdInReader, err := pc.stdIn.Reader()
+		stdInReader, err := pc.stdIn.OpenReader()
 		if err != nil {
 			return fmt.Errorf("failed to get stdin: %w", err)
 		}
@@ -62,7 +62,7 @@ func (p *Program) runCommand(pc *Command) error {
 	}
 
 	if pc.stdOut != nil {
-		stdOutWriter, err := pc.stdOut.Writer()
+		stdOutWriter, err := pc.stdOut.OpenWriter()
 		if err != nil {
 			return fmt.Errorf("failed to get stdout: %w", err)
 		}
@@ -75,7 +75,7 @@ func (p *Program) runCommand(pc *Command) error {
 	}
 
 	if pc.stdErr != nil {
-		stdErrWriter, err := pc.stdErr.Writer()
+		stdErrWriter, err := pc.stdErr.OpenWriter()
 		if err != nil {
 			return fmt.Errorf("failed to get stderr: %w", err)
 		}
@@ -87,7 +87,7 @@ func (p *Program) runCommand(pc *Command) error {
 		pc.cmd.Stderr = stdErrWriter
 	}
 
-	args, err := pc.Args()
+	args, err := pc.ExpandArgs()
 	if err != nil {
 		return fmt.Errorf("failed to run %q command, got: %w", pc.cmd.Name, err)
 	}
@@ -104,48 +104,53 @@ type Node interface {
 	End() int
 }
 
-type StringNode interface {
+type StringExpr interface {
 	Node
-	String() (string, error)
+	Expand() (string, error)
 }
 
-type CommandIn interface {
+type InputSource interface {
 	Node
-	Reader() (io.Reader, error)
+	OpenReader() (io.Reader, error)
 }
 
-type CommandOut interface {
+type OutputTarget interface {
 	Node
-	Writer() (io.Writer, error)
+	OpenWriter() (io.Writer, error)
 }
 
 type (
 	Command struct {
-		Name      StringNode
-		Arguments []StringNode
-		stdOut    CommandOut
-		stdErr    CommandOut
-		stdIn     CommandIn
-		cmd       *cmd.Command
+		Name   StringExpr
+		Args   *Arguments
+		stdOut OutputTarget
+		stdErr OutputTarget
+		stdIn  InputSource
+		cmd    *cmd.Command
+	}
+
+	Arguments struct {
+		Args []StringExpr
 	}
 
 	PipeInRedirect struct {
 		Pipe       int
 		pipeReader *io.PipeReader
 	}
-	// todo: implement a multi writer to allow for file and pipe redirect
+
 	PipeOutRedirect struct {
 		Pipe       int
 		pipeWriter *io.PipeWriter
 	}
+
 	FileRedirect struct {
 		Redirect int
-		Filename StringNode
+		Filename StringExpr
 	}
 
 	FileAppend struct {
 		Append   int
-		Filename StringNode
+		Filename StringExpr
 	}
 
 	Variable struct {
@@ -167,11 +172,17 @@ type (
 	DoubleQuotedText struct {
 		StartQuote int
 		EndQuote   int
-		Nodes      []StringNode
+		Nodes      []StringExpr
 	}
 )
 
-func (x *Command) Pos() int          { return x.Name.Pos() }
+func (x *Command) Pos() int { return x.Name.Pos() }
+func (x *Arguments) Pos() int {
+	if len(x.Args) == 0 {
+		return 0
+	}
+	return x.Args[0].Pos()
+}
 func (x *PipeInRedirect) Pos() int   { return x.Pipe }
 func (x *PipeOutRedirect) Pos() int  { return x.Pipe }
 func (x *FileRedirect) Pos() int     { return x.Redirect }
@@ -189,11 +200,17 @@ func (x *Command) End() int {
 		return x.stdErr.End()
 	case x.cmd.Stderr != nil:
 		return x.stdOut.End()
-	case len(x.Arguments) > 0:
-		return x.Arguments[len(x.Arguments)-1].End()
+	case len(x.Args.Args) > 0:
+		return x.Args.End()
 	default:
 		return x.Name.End()
 	}
+}
+func (x *Arguments) End() int {
+	if len(x.Args) == 0 {
+		return 0
+	}
+	return x.Args[len(x.Args)-1].End()
 }
 func (x *PipeInRedirect) End() int   { return x.Pipe }
 func (x *PipeOutRedirect) End() int  { return x.Pipe }
@@ -204,13 +221,13 @@ func (x *RawText) End() int          { return x.ValuePos }
 func (x *SingleQuotedText) End() int { return x.ValuePos }
 func (x *DoubleQuotedText) End() int { return x.StartQuote }
 
-func (v Variable) String() (string, error)         { return os.Expand(v.Literal, v.LookupFunc), nil }
-func (t RawText) String() (string, error)          { return t.Literal, nil }
-func (t SingleQuotedText) String() (string, error) { return t.Literal, nil }
-func (t DoubleQuotedText) String() (string, error) {
+func (v Variable) Expand() (string, error)         { return os.Expand(v.Literal, v.LookupFunc), nil }
+func (t RawText) Expand() (string, error)          { return t.Literal, nil }
+func (t SingleQuotedText) Expand() (string, error) { return t.Literal, nil }
+func (t DoubleQuotedText) Expand() (string, error) {
 	b := strings.Builder{}
 	for i := range t.Nodes {
-		s, err := t.Nodes[i].String()
+		s, err := t.Nodes[i].Expand()
 		if err != nil {
 			return "", err
 		}
@@ -219,11 +236,18 @@ func (t DoubleQuotedText) String() (string, error) {
 	return b.String(), nil
 }
 
-func (c Command) Args() ([]string, error) {
-	out := make([]string, 0, len(c.Arguments)+1)
-	out = append(out, c.cmd.Name)
-	for i := range c.Arguments {
-		arg, err := c.Arguments[i].String()
+func (x *Command) ExpandArgs() ([]string, error) {
+	args, err := x.Args.Expand()
+	if err != nil {
+		return nil, fmt.Errorf("expanding args: %w", err)
+	}
+	args = append([]string{x.cmd.Name}, args...)
+	return args, nil
+}
+func (x *Arguments) Expand() ([]string, error) {
+	out := make([]string, 0, len(x.Args)+1)
+	for i := range x.Args {
+		arg, err := x.Args[i].Expand()
 		if err != nil {
 			return out, err
 		}
@@ -232,11 +256,11 @@ func (c Command) Args() ([]string, error) {
 	return out, nil
 }
 
-func (p *PipeInRedirect) Reader() (io.Reader, error) {
+func (p *PipeInRedirect) OpenReader() (io.Reader, error) {
 	return p.pipeReader, nil
 }
 
-func (p *PipeOutRedirect) Writer() (io.Writer, error) {
+func (p *PipeOutRedirect) OpenWriter() (io.Writer, error) {
 	return p, nil
 }
 func (p *PipeOutRedirect) Write(b []byte) (int, error) {
@@ -250,8 +274,8 @@ func (p *PipeOutRedirect) Close() error {
 	return p.pipeWriter.Close()
 }
 
-func (f *FileRedirect) Writer() (io.Writer, error) {
-	filename, err := f.Filename.String()
+func (f *FileRedirect) OpenWriter() (io.Writer, error) {
+	filename, err := f.Filename.Expand()
 	if err != nil {
 		return nil, err
 	}
@@ -264,8 +288,8 @@ func (f *FileRedirect) Writer() (io.Writer, error) {
 	}
 	return os.OpenFile(filename, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
 }
-func (f *FileAppend) Writer() (io.Writer, error) {
-	filename, err := f.Filename.String()
+func (f *FileAppend) OpenWriter() (io.Writer, error) {
+	filename, err := f.Filename.Expand()
 	if err != nil {
 		return nil, err
 	}
