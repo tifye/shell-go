@@ -105,7 +105,7 @@ func (p *parser) error(err error) {
 func (p *parser) parseCommands() []*Command {
 	cmds := make([]*Command, 0)
 
-	var pipeIn *pipeInRedirect
+	var pipeIn *PipeInRedirect
 	for !p.isCurToken(tokenEOF) {
 		cmd := p.parseCommand()
 		if p.err != nil {
@@ -122,8 +122,8 @@ func (p *parser) parseCommands() []*Command {
 
 		if p.isCurToken(tokenPipeline) {
 			pr, pw := io.Pipe()
-			cmd.stdOut = &pipeOutRedirect{pw}
-			pipeIn = &pipeInRedirect{pr}
+			cmd.stdOut = &PipeOutRedirect{pw}
+			pipeIn = &PipeInRedirect{pr}
 		}
 
 		p.nextToken()
@@ -159,17 +159,17 @@ func (p *parser) parseCommand() (pc *Command) {
 		switch p.curToken.typ {
 		case tokenText, tokenSpace, tokenEscaped:
 			node := p.parseText()
-			if node != nil && len(node.literal) > 0 {
+			if node != nil && len(node.Literal) > 0 {
 				pc.args = append(pc.args, node)
 			}
 		case tokenSingleQuote:
 			node := p.parseSingleQuotes()
-			if node != nil && len(node.literal) > 0 {
+			if node != nil && len(node.Literal) > 0 {
 				pc.args = append(pc.args, node)
 			}
 		case tokenDoubleQuote:
 			node := p.parseDoubleQuotes()
-			if node != nil && len(node.parts) > 0 {
+			if node != nil && len(node.Nodes) > 0 {
 				pc.args = append(pc.args, node)
 			}
 		case tokenVariable:
@@ -189,17 +189,17 @@ func (p *parser) parseCommand() (pc *Command) {
 	}
 }
 
-func (p *parser) parseVariable() *variable {
+func (p *parser) parseVariable() *Variable {
 	assert.Assert(p.isCurToken(tokenVariable))
 
-	v := &variable{
-		literal: p.curToken.literal,
-		lookup:  p.getEnvFunc,
+	v := &Variable{
+		Literal:    p.curToken.literal,
+		LookupFunc: p.getEnvFunc,
 	}
 
 	p.nextToken()
 
-	if len(v.literal) <= 1 {
+	if len(v.Literal) <= 1 {
 		p.errorf("inavlid variable usage")
 	}
 
@@ -215,7 +215,7 @@ func (p *parser) parseRedirect(pc *Command) {
 		return
 	}
 
-	file := &fileRedirect{}
+	file := &FileRedirect{}
 
 	switch {
 	case strings.HasPrefix(p.curToken.literal, "1"):
@@ -233,15 +233,15 @@ func (p *parser) parseRedirect(pc *Command) {
 	switch p.peekToken.typ {
 	case tokenText, tokenSpace, tokenEscaped:
 		if node := p.parseText(); node != nil {
-			file.filename = node.literal
+			file.Filename = node.Literal
 		}
 	case tokenSingleQuote:
 		if node := p.parseSingleQuotes(); node != nil {
-			file.filename = node.literal
+			file.Filename = node.Literal
 		}
 	case tokenDoubleQuote:
 		if node := p.parseDoubleQuotes(); node != nil {
-			file.filename, _ = node.String()
+			file.Filename, _ = node.String()
 		}
 	default:
 		p.errorf("expected filename after redirect token but got %s", p.peekToken.typ)
@@ -257,7 +257,7 @@ func (p *parser) parseAppend(pc *Command) {
 		return
 	}
 
-	file := &fileAppend{}
+	file := &FileAppend{}
 
 	switch {
 	case strings.HasPrefix(p.curToken.literal, "1"):
@@ -275,55 +275,55 @@ func (p *parser) parseAppend(pc *Command) {
 	switch p.peekToken.typ {
 	case tokenText, tokenSpace, tokenEscaped:
 		if node := p.parseText(); node != nil {
-			file.filename = node.literal
+			file.Filename = node.Literal
 		}
 	case tokenSingleQuote:
 		if node := p.parseSingleQuotes(); node != nil {
-			file.filename = node.literal
+			file.Filename = node.Literal
 		}
 	case tokenDoubleQuote:
 		if node := p.parseDoubleQuotes(); node != nil {
-			file.filename, _ = node.String()
+			file.Filename, _ = node.String()
 		}
 	default:
 		p.errorf("expected filename after append token but got %s", p.peekToken.typ)
 	}
 }
 
-func (p *parser) parseText() *rawText {
+func (p *parser) parseText() *RawText {
 	str := ""
 	for {
 		switch p.curToken.typ {
 		case tokenSpace:
 			p.nextToken()
 			if len(str) > 0 {
-				return &rawText{literal: str}
+				return &RawText{Literal: str}
 			}
 		case tokenText, tokenEscaped:
 			str += p.curToken.literal
 			p.nextToken()
 		case tokenSingleQuote:
 			if !p.isPeekToken(tokenSingleQuote) {
-				return &rawText{literal: str}
+				return &RawText{Literal: str}
 			}
 			p.nextToken()
 			p.nextToken()
 		case tokenDoubleQuote:
 			if !p.isPeekToken(tokenDoubleQuote) {
-				return &rawText{literal: str}
+				return &RawText{Literal: str}
 			}
 			p.nextToken()
 			p.nextToken()
 		default:
-			return &rawText{literal: str}
+			return &RawText{Literal: str}
 		}
 	}
 }
 
-func (p *parser) parseSingleQuotes() *singleQuotedText {
+func (p *parser) parseSingleQuotes() *SingleQuotedText {
 	assert.Assert(p.isCurToken(tokenSingleQuote))
 
-	node := &singleQuotedText{}
+	node := &SingleQuotedText{}
 	builder := strings.Builder{}
 
 Loop:
@@ -335,7 +335,7 @@ Loop:
 		case p.isPeekToken(tokenSingleQuote):
 			p.nextToken()
 			if p.tryPeek(tokenSingleQuote) {
-				_, _ = builder.WriteString(p.parseSingleQuotes().literal)
+				_, _ = builder.WriteString(p.parseSingleQuotes().Literal)
 			}
 			p.nextToken()
 			break Loop
@@ -344,16 +344,16 @@ Loop:
 		}
 	}
 
-	node.literal = builder.String()
+	node.Literal = builder.String()
 	return node
 }
 
-func (p *parser) parseDoubleQuotes() *doubleQuotedText {
+func (p *parser) parseDoubleQuotes() *DoubleQuotedText {
 	assert.Assert(p.isCurToken(tokenDoubleQuote))
 	p.nextToken()
 
-	node := &doubleQuotedText{
-		parts: make([]StringNode, 0),
+	node := &DoubleQuotedText{
+		Nodes: make([]StringNode, 0),
 	}
 
 Loop:
@@ -361,19 +361,19 @@ Loop:
 		switch p.curToken.typ {
 		case tokenText, tokenEscaped:
 			rt := p.parseText()
-			node.parts = append(node.parts, rt)
+			node.Nodes = append(node.Nodes, rt)
 		case tokenVariable:
 			v := p.parseVariable()
-			node.parts = append(node.parts, v)
+			node.Nodes = append(node.Nodes, v)
 		case tokenDoubleQuote:
 			if p.tryPeek(tokenDoubleQuote) {
 				dq := p.parseDoubleQuotes()
-				node.parts = append(node.parts, dq)
+				node.Nodes = append(node.Nodes, dq)
 			}
 
 			if p.tryPeek(tokenText) {
 				rt := p.parseText()
-				node.parts = append(node.parts, rt)
+				node.Nodes = append(node.Nodes, rt)
 			} else {
 				p.nextToken()
 			}

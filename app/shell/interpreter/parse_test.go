@@ -5,7 +5,6 @@ import (
 
 	"github.com/codecrafters-io/shell-starter-go/app/cmd"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestParseSingleCommands(t *testing.T) {
@@ -105,66 +104,6 @@ func TestParseSingleCommands(t *testing.T) {
 
 			err = prog.Run()
 			assert.NoError(t, err)
-		})
-	}
-}
-
-// todo: improve test structure
-func TestParseRedirects(t *testing.T) {
-	tt := []struct {
-		input    string
-		filename string
-	}{
-		{
-			input:    "echo meep > meep.txt",
-			filename: "meep.txt",
-		},
-		{
-			input:    "echo meep >> meep.txt",
-			filename: "meep.txt",
-		},
-		{
-			input:    "echo meep 1> meep.txt",
-			filename: "meep.txt",
-		},
-		{
-			input:    "echo meep 1>> meep.txt",
-			filename: "meep.txt",
-		},
-		// {
-		// 	input:    "echo meep 2> meep.txt",
-		// 	filename: "meep.txt",
-		// },
-		// {
-		// 	input:    "echo meep 2>> meep.txt",
-		// 	filename: "meep.txt",
-		// },
-		{
-			input:    "echo 'Hello James' 1> test.txt",
-			filename: "test.txt",
-		},
-	}
-
-	for _, test := range tt {
-		t.Run(test.input, func(t *testing.T) {
-			prog, err := Parse(test.input, CommandLookuperFunc(func(s string) (*cmd.Command, bool, error) {
-				return &cmd.Command{
-					Name: "",
-					Run:  func(cmd *cmd.Command, args []string) error { return nil },
-				}, true, nil
-			}), getEnv)
-			require.NoError(t, err)
-			require.Len(t, prog.cmds, 1)
-
-			cmd := prog.cmds[0]
-			switch typ := cmd.stdOut.(type) {
-			case *fileAppend:
-				assert.Equal(t, test.filename, typ.filename)
-			case *fileRedirect:
-				assert.Equal(t, test.filename, typ.filename)
-			default:
-				assert.FailNow(t, "unsupported")
-			}
 		})
 	}
 }

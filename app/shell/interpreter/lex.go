@@ -211,9 +211,8 @@ func lexText(l *lexer) stateFunc {
 		switch r := l.peek(); {
 		case isSpace(r):
 			l.emitText()
-			_ = l.accept(spaceChars)
+			l.acceptRun(spaceChars)
 			l.emit(tokenSpace)
-			l.skipWhitespace()
 			return lexText
 		case r == '\'':
 			l.emitText()

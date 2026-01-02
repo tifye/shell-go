@@ -108,32 +108,32 @@ type (
 		args   []StringNode
 	}
 
-	pipeInRedirect struct {
+	PipeInRedirect struct {
 		pipeReader *io.PipeReader
 	}
 	// todo: implement a multi writer to allow for file and pipe redirect
-	pipeOutRedirect struct {
+	PipeOutRedirect struct {
 		pipeWriter *io.PipeWriter
 	}
-	fileRedirect struct {
-		filename string
+	FileRedirect struct {
+		Filename string
 	}
-	fileAppend struct {
-		filename string
+	FileAppend struct {
+		Filename string
 	}
 
-	variable struct {
-		literal string
-		lookup  func(string) string
+	Variable struct {
+		Literal    string
+		LookupFunc func(string) string
 	}
-	rawText struct {
-		literal string
+	RawText struct {
+		Literal string
 	}
-	singleQuotedText struct {
-		literal string
+	SingleQuotedText struct {
+		Literal string
 	}
-	doubleQuotedText struct {
-		parts []StringNode
+	DoubleQuotedText struct {
+		Nodes []StringNode
 	}
 )
 
@@ -154,7 +154,7 @@ type commandIn interface {
 	Reader() (io.Reader, error)
 }
 
-func (p *pipeInRedirect) Reader() (io.Reader, error) {
+func (p *PipeInRedirect) Reader() (io.Reader, error) {
 	return p.pipeReader, nil
 }
 
@@ -162,57 +162,56 @@ type commandOut interface {
 	Writer() (io.Writer, error)
 }
 
-func (p *pipeOutRedirect) Writer() (io.Writer, error) {
-	// ignore pipe writes incase
+func (p *PipeOutRedirect) Writer() (io.Writer, error) {
 	return p, nil
 }
-func (p *pipeOutRedirect) Write(b []byte) (int, error) {
+func (p *PipeOutRedirect) Write(b []byte) (int, error) {
 	n, err := p.pipeWriter.Write(b)
 	if errors.Is(err, io.ErrClosedPipe) {
 		return len(b), nil
 	}
 	return n, err
 }
-func (p *pipeOutRedirect) Close() error {
+func (p *PipeOutRedirect) Close() error {
 	return p.pipeWriter.Close()
 }
 
-func (f *fileRedirect) Writer() (io.Writer, error) {
-	dir := filepath.Dir(f.filename)
+func (f *FileRedirect) Writer() (io.Writer, error) {
+	dir := filepath.Dir(f.Filename)
 	if len(dir) > 0 {
 		if err := os.MkdirAll(dir, 0700); err != nil {
 			return nil, err
 		}
 	}
-	return os.OpenFile(f.filename, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
+	return os.OpenFile(f.Filename, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
 }
-func (f *fileAppend) Writer() (io.Writer, error) {
-	dir := filepath.Dir(f.filename)
+func (f *FileAppend) Writer() (io.Writer, error) {
+	dir := filepath.Dir(f.Filename)
 	if len(dir) > 0 {
 		if err := os.MkdirAll(dir, 0700); err != nil {
 			return nil, err
 		}
 	}
-	return os.OpenFile(f.filename, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
+	return os.OpenFile(f.Filename, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
 }
 
 type StringNode interface {
 	String() (string, error)
 }
 
-func (v variable) String() (string, error) {
-	return os.Expand(v.literal, v.lookup), nil
+func (v Variable) String() (string, error) {
+	return os.Expand(v.Literal, v.LookupFunc), nil
 }
-func (t rawText) String() (string, error) {
-	return t.literal, nil
+func (t RawText) String() (string, error) {
+	return t.Literal, nil
 }
-func (t singleQuotedText) String() (string, error) {
-	return t.literal, nil
+func (t SingleQuotedText) String() (string, error) {
+	return t.Literal, nil
 }
-func (t doubleQuotedText) String() (string, error) {
+func (t DoubleQuotedText) String() (string, error) {
 	b := strings.Builder{}
-	for i := range t.parts {
-		s, err := t.parts[i].String()
+	for i := range t.Nodes {
+		s, err := t.Nodes[i].String()
 		if err != nil {
 			return "", err
 		}

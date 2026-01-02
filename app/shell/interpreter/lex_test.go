@@ -35,7 +35,7 @@ func TestNextToken(t *testing.T) {
 			input: "one   two",
 			output: []token{
 				{tokenText, "one", -1},
-				{tokenSpace, " ", -1},
+				{tokenSpace, "   ", -1},
 				{tokenText, "two", -1},
 				{tokenEOF, "", -1},
 			},
@@ -121,7 +121,7 @@ func TestNextToken(t *testing.T) {
 			output: []token{
 				{tokenText, "one", -1},
 				{tokenEscaped, " ", -1},
-				{tokenSpace, " ", -1},
+				{tokenSpace, "  ", -1},
 				{tokenText, "two", -1},
 				{tokenEOF, "", -1},
 			},
