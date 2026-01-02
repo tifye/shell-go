@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/codecrafters-io/shell-starter-go/app/cmd"
 	"golang.org/x/sync/errgroup"
@@ -29,7 +30,7 @@ func (p *Program) Run() error {
 }
 
 func (p *Program) runCommand(pc *Command) error {
-	cmdName, err := pc.name.String()
+	cmdName, err := pc.Name.String()
 	if err != nil {
 		return fmt.Errorf("evaluating command name: %w", err)
 	}
@@ -98,50 +99,131 @@ func (p *Program) runCommand(pc *Command) error {
 	return nil
 }
 
+type Node interface {
+	Pos() int
+	End() int
+}
+
+type StringNode interface {
+	Node
+	String() (string, error)
+}
+
+type CommandIn interface {
+	Node
+	Reader() (io.Reader, error)
+}
+
+type CommandOut interface {
+	Node
+	Writer() (io.Writer, error)
+}
+
 type (
 	Command struct {
-		name   StringNode
-		cmd    *cmd.Command
-		stdOut commandOut
-		stdErr commandOut
-		stdIn  commandIn
-		args   []StringNode
+		Name      StringNode
+		Arguments []StringNode
+		stdOut    CommandOut
+		stdErr    CommandOut
+		stdIn     CommandIn
+		cmd       *cmd.Command
 	}
 
 	PipeInRedirect struct {
+		Pipe       int
 		pipeReader *io.PipeReader
 	}
 	// todo: implement a multi writer to allow for file and pipe redirect
 	PipeOutRedirect struct {
+		Pipe       int
 		pipeWriter *io.PipeWriter
 	}
 	FileRedirect struct {
-		Filename string
+		Redirect int
+		Filename StringNode
 	}
+
 	FileAppend struct {
-		Filename string
+		Append   int
+		Filename StringNode
 	}
 
 	Variable struct {
+		ValuePos   int
 		Literal    string
 		LookupFunc func(string) string
 	}
+
 	RawText struct {
-		Literal string
+		ValuePos int
+		Literal  string
 	}
+
 	SingleQuotedText struct {
-		Literal string
+		ValuePos int
+		Literal  string
 	}
+
 	DoubleQuotedText struct {
-		Nodes []StringNode
+		StartQuote int
+		EndQuote   int
+		Nodes      []StringNode
 	}
 )
 
+func (x *Command) Pos() int          { return x.Name.Pos() }
+func (x *PipeInRedirect) Pos() int   { return x.Pipe }
+func (x *PipeOutRedirect) Pos() int  { return x.Pipe }
+func (x *FileRedirect) Pos() int     { return x.Redirect }
+func (x *FileAppend) Pos() int       { return x.Append }
+func (x *Variable) Pos() int         { return x.ValuePos }
+func (x *RawText) Pos() int          { return x.ValuePos }
+func (x *SingleQuotedText) Pos() int { return x.ValuePos }
+func (x *DoubleQuotedText) Pos() int { return x.StartQuote }
+
+func (x *Command) End() int {
+	switch {
+	case x.stdIn != nil:
+		return x.stdIn.End()
+	case x.cmd.Stderr != nil:
+		return x.stdErr.End()
+	case x.cmd.Stderr != nil:
+		return x.stdOut.End()
+	case len(x.Arguments) > 0:
+		return x.Arguments[len(x.Arguments)-1].End()
+	default:
+		return x.Name.End()
+	}
+}
+func (x *PipeInRedirect) End() int   { return x.Pipe }
+func (x *PipeOutRedirect) End() int  { return x.Pipe }
+func (x *FileRedirect) End() int     { return x.Filename.End() }
+func (x *FileAppend) End() int       { return x.Filename.End() }
+func (x *Variable) End() int         { return x.ValuePos + utf8.RuneCountInString(x.Literal) }
+func (x *RawText) End() int          { return x.ValuePos }
+func (x *SingleQuotedText) End() int { return x.ValuePos }
+func (x *DoubleQuotedText) End() int { return x.StartQuote }
+
+func (v Variable) String() (string, error)         { return os.Expand(v.Literal, v.LookupFunc), nil }
+func (t RawText) String() (string, error)          { return t.Literal, nil }
+func (t SingleQuotedText) String() (string, error) { return t.Literal, nil }
+func (t DoubleQuotedText) String() (string, error) {
+	b := strings.Builder{}
+	for i := range t.Nodes {
+		s, err := t.Nodes[i].String()
+		if err != nil {
+			return "", err
+		}
+		b.WriteString(s)
+	}
+	return b.String(), nil
+}
+
 func (c Command) Args() ([]string, error) {
-	out := make([]string, 0, len(c.args)+1)
+	out := make([]string, 0, len(c.Arguments)+1)
 	out = append(out, c.cmd.Name)
-	for i := range c.args {
-		arg, err := c.args[i].String()
+	for i := range c.Arguments {
+		arg, err := c.Arguments[i].String()
 		if err != nil {
 			return out, err
 		}
@@ -150,16 +232,8 @@ func (c Command) Args() ([]string, error) {
 	return out, nil
 }
 
-type commandIn interface {
-	Reader() (io.Reader, error)
-}
-
 func (p *PipeInRedirect) Reader() (io.Reader, error) {
 	return p.pipeReader, nil
-}
-
-type commandOut interface {
-	Writer() (io.Writer, error)
 }
 
 func (p *PipeOutRedirect) Writer() (io.Writer, error) {
@@ -177,45 +251,30 @@ func (p *PipeOutRedirect) Close() error {
 }
 
 func (f *FileRedirect) Writer() (io.Writer, error) {
-	dir := filepath.Dir(f.Filename)
+	filename, err := f.Filename.String()
+	if err != nil {
+		return nil, err
+	}
+
+	dir := filepath.Dir(filename)
 	if len(dir) > 0 {
 		if err := os.MkdirAll(dir, 0700); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("making path: %w", err)
 		}
 	}
-	return os.OpenFile(f.Filename, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
+	return os.OpenFile(filename, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
 }
 func (f *FileAppend) Writer() (io.Writer, error) {
-	dir := filepath.Dir(f.Filename)
+	filename, err := f.Filename.String()
+	if err != nil {
+		return nil, err
+	}
+
+	dir := filepath.Dir(filename)
 	if len(dir) > 0 {
 		if err := os.MkdirAll(dir, 0700); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("making path: %w", err)
 		}
 	}
-	return os.OpenFile(f.Filename, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
-}
-
-type StringNode interface {
-	String() (string, error)
-}
-
-func (v Variable) String() (string, error) {
-	return os.Expand(v.Literal, v.LookupFunc), nil
-}
-func (t RawText) String() (string, error) {
-	return t.Literal, nil
-}
-func (t SingleQuotedText) String() (string, error) {
-	return t.Literal, nil
-}
-func (t DoubleQuotedText) String() (string, error) {
-	b := strings.Builder{}
-	for i := range t.Nodes {
-		s, err := t.Nodes[i].String()
-		if err != nil {
-			return "", err
-		}
-		b.WriteString(s)
-	}
-	return b.String(), nil
+	return os.OpenFile(filename, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
 }

@@ -122,8 +122,8 @@ func (p *parser) parseCommands() []*Command {
 
 		if p.isCurToken(tokenPipeline) {
 			pr, pw := io.Pipe()
-			cmd.stdOut = &PipeOutRedirect{pw}
-			pipeIn = &PipeInRedirect{pr}
+			cmd.stdOut = &PipeOutRedirect{p.curToken.pos, pw}
+			pipeIn = &PipeInRedirect{p.curToken.pos, pr}
 		}
 
 		p.nextToken()
@@ -134,7 +134,7 @@ func (p *parser) parseCommands() []*Command {
 
 func (p *parser) parseCommand() (pc *Command) {
 	pc = &Command{
-		args: []StringNode{},
+		Arguments: []StringNode{},
 	}
 
 	for p.isCurToken(tokenSpace) {
@@ -143,13 +143,13 @@ func (p *parser) parseCommand() (pc *Command) {
 
 	switch p.curToken.typ {
 	case tokenVariable:
-		pc.name = p.parseVariable()
+		pc.Name = p.parseVariable()
 	case tokenText, tokenEscaped:
-		pc.name = p.parseText()
+		pc.Name = p.parseText()
 	case tokenSingleQuote:
-		pc.name = p.parseSingleQuotes()
+		pc.Name = p.parseSingleQuotes()
 	case tokenDoubleQuote:
-		pc.name = p.parseDoubleQuotes()
+		pc.Name = p.parseDoubleQuotes()
 	default:
 		p.errorf("unsupported token type for command name: %q", p.curToken.typ)
 		return nil
@@ -160,22 +160,22 @@ func (p *parser) parseCommand() (pc *Command) {
 		case tokenText, tokenSpace, tokenEscaped:
 			node := p.parseText()
 			if node != nil && len(node.Literal) > 0 {
-				pc.args = append(pc.args, node)
+				pc.Arguments = append(pc.Arguments, node)
 			}
 		case tokenSingleQuote:
 			node := p.parseSingleQuotes()
 			if node != nil && len(node.Literal) > 0 {
-				pc.args = append(pc.args, node)
+				pc.Arguments = append(pc.Arguments, node)
 			}
 		case tokenDoubleQuote:
 			node := p.parseDoubleQuotes()
 			if node != nil && len(node.Nodes) > 0 {
-				pc.args = append(pc.args, node)
+				pc.Arguments = append(pc.Arguments, node)
 			}
 		case tokenVariable:
 			node := p.parseVariable()
 			if node != nil {
-				pc.args = append(pc.args, node)
+				pc.Arguments = append(pc.Arguments, node)
 			}
 		case tokenRedirect:
 			p.parseRedirect(pc)
@@ -233,15 +233,15 @@ func (p *parser) parseRedirect(pc *Command) {
 	switch p.peekToken.typ {
 	case tokenText, tokenSpace, tokenEscaped:
 		if node := p.parseText(); node != nil {
-			file.Filename = node.Literal
+			file.Filename = node
 		}
 	case tokenSingleQuote:
 		if node := p.parseSingleQuotes(); node != nil {
-			file.Filename = node.Literal
+			file.Filename = node
 		}
 	case tokenDoubleQuote:
 		if node := p.parseDoubleQuotes(); node != nil {
-			file.Filename, _ = node.String()
+			file.Filename = node
 		}
 	default:
 		p.errorf("expected filename after redirect token but got %s", p.peekToken.typ)
@@ -275,15 +275,15 @@ func (p *parser) parseAppend(pc *Command) {
 	switch p.peekToken.typ {
 	case tokenText, tokenSpace, tokenEscaped:
 		if node := p.parseText(); node != nil {
-			file.Filename = node.Literal
+			file.Filename = node
 		}
 	case tokenSingleQuote:
 		if node := p.parseSingleQuotes(); node != nil {
-			file.Filename = node.Literal
+			file.Filename = node
 		}
 	case tokenDoubleQuote:
 		if node := p.parseDoubleQuotes(); node != nil {
-			file.Filename, _ = node.String()
+			file.Filename = node
 		}
 	default:
 		p.errorf("expected filename after append token but got %s", p.peekToken.typ)
