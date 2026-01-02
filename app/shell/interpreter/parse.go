@@ -300,7 +300,7 @@ func (p *parser) parseText() *RawText {
 				return &RawText{Literal: str}
 			}
 		case tokenText, tokenEscaped:
-			str += p.curToken.literal
+			str += strings.TrimPrefix(p.curToken.literal, `\`)
 			p.nextToken()
 		case tokenSingleQuote:
 			if !p.isPeekToken(tokenSingleQuote) {

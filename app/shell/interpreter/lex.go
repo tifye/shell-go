@@ -154,12 +154,13 @@ func (l *lexer) emitText() {
 }
 
 func (l *lexer) escaped() {
+	assert.Assert(l.start == l.pos)
+
 	if !l.accept("\\") {
 		l.emit(tokenError)
 		return
 	}
 
-	l.discard()
 	l.next()
 	l.emit(tokenEscaped)
 }
@@ -314,9 +315,7 @@ func lexInsideDoubleQuotes(l *lexer) stateFunc {
 				l.backup()
 				l.emitText()
 
-				_ = l.accept(`\`)
-				l.discard()
-
+				l.accept(`\`)
 				l.next()
 				l.emit(tokenEscaped)
 			}
