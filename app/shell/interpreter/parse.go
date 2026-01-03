@@ -208,10 +208,8 @@ func (p *parser) parseRedirects() *Redirects {
 Loop:
 	for {
 		switch p.curToken.typ {
-		case tokenRedirect:
+		case tokenRedirect, tokenAppend:
 			p.parseRedirect(r)
-		case tokenAppend:
-			p.parseAppend(r)
 		default:
 			break Loop
 		}
@@ -247,84 +245,50 @@ func (p *parser) parseVariable() *Variable {
 }
 
 func (p *parser) parseRedirect(r *Redirects) {
-	assert.Assert(p.isCurToken(tokenRedirect))
+	assert.Assert(p.isCurToken(tokenAppend) || p.isCurToken(tokenRedirect))
 
 	if !p.isPrevToken(tokenSpace) {
 		p.errorf("expected space before redirect token")
 		return
 	}
 
-	file := &FileRedirect{}
-
-	switch {
-	case strings.HasPrefix(p.curToken.literal, "1"):
-		r.StdOut = append(r.StdOut, file)
-	case strings.HasPrefix(p.curToken.literal, "2"):
-		r.StdErr = append(r.StdOut, file)
-	default:
-		r.StdOut = append(r.StdOut, file)
-	}
+	isRedirect := !p.isCurToken(tokenAppend)
+	isStdout := !strings.HasPrefix(p.curToken.literal, "2")
 
 	if !p.expectPeek(tokenSpace) {
 		return
 	}
 
+	var filename StringExpr
+
 	switch p.peekToken.typ {
 	case tokenText, tokenSpace, tokenEscaped:
 		if node := p.parseText(); node != nil {
-			file.Filename = node
+			filename = node
 		}
 	case tokenSingleQuote:
 		if node := p.parseSingleQuotes(); node != nil {
-			file.Filename = node
+			filename = node
 		}
 	case tokenDoubleQuote:
 		if node := p.parseDoubleQuotes(); node != nil {
-			file.Filename = node
+			filename = node
 		}
 	default:
 		p.errorf("expected filename after redirect token but got %s", p.peekToken.typ)
 	}
-}
 
-func (p *parser) parseAppend(r *Redirects) {
-	assert.Assert(p.isCurToken(tokenAppend))
-
-	if !p.isPrevToken(tokenSpace) {
-		p.errorf("expected space before append token")
-		return
+	var out OutputTarget
+	if isRedirect {
+		out = &FileRedirect{Filename: filename}
+	} else {
+		out = &FileAppend{Filename: filename}
 	}
 
-	file := &FileAppend{}
-
-	switch {
-	case strings.HasPrefix(p.curToken.literal, "1"):
-		r.StdOut = append(r.StdOut, file)
-	case strings.HasPrefix(p.curToken.literal, "2"):
-		r.StdErr = append(r.StdOut, file)
-	default:
-		r.StdOut = append(r.StdOut, file)
-	}
-
-	if !p.expectPeek(tokenSpace) {
-		return
-	}
-
-	switch p.peekToken.typ {
-	case tokenText, tokenSpace, tokenEscaped:
-		if node := p.parseText(); node != nil {
-			file.Filename = node
-		}
-	case tokenSingleQuote:
-		if node := p.parseSingleQuotes(); node != nil {
-			file.Filename = node
-		}
-	case tokenDoubleQuote:
-		if node := p.parseDoubleQuotes(); node != nil {
-			file.Filename = node
-		}
-	default:
-		p.errorf("expected filename after append token but got %s", p.peekToken.typ)
+	if isStdout {
+		r.StdOut = append(r.StdOut, out)
+	} else {
+		r.StdErr = append(r.StdErr, out)
 	}
 }
 
