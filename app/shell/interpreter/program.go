@@ -20,35 +20,28 @@ type Program struct {
 }
 
 func (p *Program) Run() error {
-	eg := errgroup.Group{}
-	eg.SetLimit(len(p.cmds))
+	var eg errgroup.Group
 	for _, c := range p.cmds {
-		eg.Go(func() error {
-			return p.runCommand(c)
-		})
+		if c.RunParallel {
+			eg.Go(func() error {
+				return p.runCommand(c)
+			})
+		} else {
+			err := p.runCommand(c)
+			err = errors.Join(err, eg.Wait())
+			if err != nil {
+				return err
+			}
+		}
 	}
 	return eg.Wait()
 }
 
 func (p *Program) runCommand(pc *Command) error {
-	if pc.Redirects != nil {
-		defer pc.Redirects.CloseAll()
-	}
-
-	cmdName, err := pc.Name.Expand()
+	cmd, err := p.getCommand(pc)
 	if err != nil {
-		return fmt.Errorf("evaluating command name: %w", err)
-	}
-	if len(cmdName) == 0 {
-		return fmt.Errorf("%s: %w", cmdName, ErrCommandNotFound)
-	}
-
-	cmd, found, err := p.CommandLookupFunc(cmdName)
-	if err != nil {
-		return fmt.Errorf("looking up cmd: %s", err)
-	}
-	if !found {
-		return fmt.Errorf("%s: %w", cmdName, ErrCommandNotFound)
+		pc.Redirects.CloseAll()
+		return err
 	}
 
 	pc.cmd = cmd
@@ -106,6 +99,30 @@ func (p *Program) runCommand(pc *Command) error {
 	return nil
 }
 
+func (p *Program) getCommand(pc *Command) (*cmd.Command, error) {
+	cmdName, err := pc.Name.Expand()
+	if err != nil {
+
+		return nil, fmt.Errorf("evaluating command name: %w", err)
+	}
+	if len(cmdName) == 0 {
+
+		return nil, fmt.Errorf("%s: %w", cmdName, ErrCommandNotFound)
+	}
+
+	cmd, found, err := p.CommandLookupFunc(cmdName)
+	if err != nil {
+
+		return nil, fmt.Errorf("looking up cmd: %s", err)
+	}
+	if !found {
+
+		return nil, fmt.Errorf("%s: %w", cmdName, ErrCommandNotFound)
+	}
+
+	return cmd, nil
+}
+
 type Node interface {
 	Pos() int
 	End() int
@@ -128,10 +145,11 @@ type OutputTarget interface {
 
 type (
 	Command struct {
-		Name      StringExpr
-		Args      *Arguments
-		Redirects *Redirects
-		cmd       *cmd.Command
+		Name        StringExpr
+		Args        *Arguments
+		Redirects   *Redirects
+		cmd         *cmd.Command
+		RunParallel bool
 	}
 
 	Arguments struct {

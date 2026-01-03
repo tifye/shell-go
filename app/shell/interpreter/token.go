@@ -20,6 +20,7 @@ const (
 	tokenPipeline
 	tokenAmpersand
 	tokenVariable
+	tokenSemicolon
 )
 
 type token struct {

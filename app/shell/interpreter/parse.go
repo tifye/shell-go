@@ -126,10 +126,14 @@ func (p *parser) parseCommands() []*Command {
 
 		cmds = append(cmds, cmd)
 
-		if p.isCurToken(tokenPipeline) {
+		switch p.curToken.typ {
+		case tokenPipeline:
+			cmd.RunParallel = true
 			pr, pw := io.Pipe()
 			cmd.Redirects.StdOut = append(cmd.Redirects.StdOut, &PipeOutRedirect{p.curToken.pos, pw})
 			pipeIn = &PipeInRedirect{p.curToken.pos, pr}
+		case tokenSemicolon:
+			cmd.RunParallel = false
 		}
 
 		p.nextToken()

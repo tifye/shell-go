@@ -242,6 +242,11 @@ func lexText(l *lexer) stateFunc {
 			l.next()
 			l.emit(tokenAmpersand)
 			return lexText
+		case r == ';':
+			l.emitText()
+			l.next()
+			l.emit(tokenSemicolon)
+			return lexText
 		case r == '$':
 			l.emitText()
 			l.variable()
