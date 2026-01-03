@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"iter"
 	"os"
 	"path/filepath"
 	"strings"
@@ -48,43 +49,45 @@ func (p *Program) runCommand(pc *Command) error {
 
 	pc.cmd = cmd
 
-	if pc.stdIn != nil {
-		stdInReader, err := pc.stdIn.OpenReader()
-		if err != nil {
-			return fmt.Errorf("failed to get stdin: %w", err)
+	if pc.Redirects != nil {
+		if pc.Redirects.StdIn != nil {
+			r, err := pc.Redirects.StdIn.OpenReader()
+			if err != nil {
+				return fmt.Errorf("failed to open stdin reader: %w", err)
+			}
+			defer r.Close()
+			pc.cmd.Stdin = r
 		}
-		if rc, ok := stdInReader.(io.Closer); ok {
-			defer func() {
-				_ = rc.Close()
-			}()
-		}
-		pc.cmd.Stdin = stdInReader
-	}
 
-	if pc.stdOut != nil {
-		stdOutWriter, err := pc.stdOut.OpenWriter()
-		if err != nil {
-			return fmt.Errorf("failed to get stdout: %w", err)
-		}
-		if wc, ok := stdOutWriter.(io.Closer); ok {
-			defer func() {
-				_ = wc.Close()
-			}()
-		}
-		pc.cmd.Stdout = stdOutWriter
-	}
+		if len(pc.Redirects.StdOut) > 0 {
+			writers := []io.Writer{}
+			for i := range pc.Redirects.StdOut {
+				w, err := pc.Redirects.StdOut[i].OpenWriter()
+				if err != nil {
+					return fmt.Errorf("failed to open stdout writer: %w", err)
+				}
+				defer w.Close()
+				writers = append(writers, w)
+			}
 
-	if pc.stdErr != nil {
-		stdErrWriter, err := pc.stdErr.OpenWriter()
-		if err != nil {
-			return fmt.Errorf("failed to get stderr: %w", err)
+			mw := io.MultiWriter(writers...)
+			pc.cmd.Stdout = mw
 		}
-		if wc, ok := stdErrWriter.(io.Closer); ok {
-			defer func() {
-				_ = wc.Close()
-			}()
+
+		if len(pc.Redirects.StdErr) > 0 {
+			writers := []io.Writer{}
+			for i := range pc.Redirects.StdErr {
+				w, err := pc.Redirects.StdErr[i].OpenWriter()
+				if err != nil {
+					return fmt.Errorf("failed to open stderr writer: %w", err)
+				}
+				defer w.Close()
+				writers = append(writers, w)
+			}
+
+			mw := io.MultiWriter(writers...)
+			pc.cmd.Stderr = mw
 		}
-		pc.cmd.Stderr = stdErrWriter
 	}
 
 	args, err := pc.ExpandArgs()
@@ -111,36 +114,42 @@ type StringExpr interface {
 
 type InputSource interface {
 	Node
-	OpenReader() (io.Reader, error)
+	OpenReader() (io.ReadCloser, error)
 }
 
 type OutputTarget interface {
 	Node
-	OpenWriter() (io.Writer, error)
+	OpenWriter() (io.WriteCloser, error)
 }
 
 type (
 	Command struct {
-		Name   StringExpr
-		Args   *Arguments
-		stdOut OutputTarget
-		stdErr OutputTarget
-		stdIn  InputSource
-		cmd    *cmd.Command
+		Name      StringExpr
+		Args      *Arguments
+		Redirects *Redirects
+		cmd       *cmd.Command
 	}
 
 	Arguments struct {
 		Args []StringExpr
 	}
 
+	Redirects struct {
+		BeginPos int
+		EndPos   int
+		StdIn    InputSource
+		StdOut   []OutputTarget
+		StdErr   []OutputTarget
+	}
+
 	PipeInRedirect struct {
 		Pipe       int
-		pipeReader *io.PipeReader
+		PipeReader *io.PipeReader
 	}
 
 	PipeOutRedirect struct {
 		Pipe       int
-		pipeWriter *io.PipeWriter
+		PipeWriter *io.PipeWriter
 	}
 
 	FileRedirect struct {
@@ -183,6 +192,7 @@ func (x *Arguments) Pos() int {
 	}
 	return x.Args[0].Pos()
 }
+func (x *Redirects) Pos() int        { return x.BeginPos }
 func (x *PipeInRedirect) Pos() int   { return x.Pipe }
 func (x *PipeOutRedirect) Pos() int  { return x.Pipe }
 func (x *FileRedirect) Pos() int     { return x.Redirect }
@@ -194,12 +204,8 @@ func (x *DoubleQuotedText) Pos() int { return x.StartQuote }
 
 func (x *Command) End() int {
 	switch {
-	case x.stdIn != nil:
-		return x.stdIn.End()
-	case x.cmd.Stderr != nil:
-		return x.stdErr.End()
-	case x.cmd.Stderr != nil:
-		return x.stdOut.End()
+	case x.Redirects != nil:
+		return x.Redirects.End()
 	case len(x.Args.Args) > 0:
 		return x.Args.End()
 	default:
@@ -212,6 +218,7 @@ func (x *Arguments) End() int {
 	}
 	return x.Args[len(x.Args)-1].End()
 }
+func (x *Redirects) End() int        { return x.EndPos }
 func (x *PipeInRedirect) End() int   { return x.Pipe }
 func (x *PipeOutRedirect) End() int  { return x.Pipe }
 func (x *FileRedirect) End() int     { return x.Filename.End() }
@@ -256,25 +263,32 @@ func (x *Arguments) Expand() ([]string, error) {
 	return out, nil
 }
 
-func (p *PipeInRedirect) OpenReader() (io.Reader, error) {
-	return p.pipeReader, nil
+func (p *PipeInRedirect) OpenReader() (io.ReadCloser, error) {
+	return p.PipeReader, nil
 }
 
-func (p *PipeOutRedirect) OpenWriter() (io.Writer, error) {
+func (p *PipeOutRedirect) OpenWriter() (io.WriteCloser, error) {
 	return p, nil
 }
 func (p *PipeOutRedirect) Write(b []byte) (int, error) {
-	n, err := p.pipeWriter.Write(b)
+	n, err := p.PipeWriter.Write(b)
 	if errors.Is(err, io.ErrClosedPipe) {
 		return len(b), nil
 	}
 	return n, err
 }
 func (p *PipeOutRedirect) Close() error {
-	return p.pipeWriter.Close()
+	return p.PipeWriter.Close()
 }
 
-func (f *FileRedirect) OpenWriter() (io.Writer, error) {
+func (f *FileRedirect) OpenReader() (io.ReadCloser, error) {
+	filename, err := f.Filename.Expand()
+	if err != nil {
+		return nil, err
+	}
+	return os.OpenFile(filename, os.O_RDONLY, 0)
+}
+func (f *FileRedirect) OpenWriter() (io.WriteCloser, error) {
 	filename, err := f.Filename.Expand()
 	if err != nil {
 		return nil, err
@@ -288,7 +302,7 @@ func (f *FileRedirect) OpenWriter() (io.Writer, error) {
 	}
 	return os.OpenFile(filename, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
 }
-func (f *FileAppend) OpenWriter() (io.Writer, error) {
+func (f *FileAppend) OpenWriter() (io.WriteCloser, error) {
 	filename, err := f.Filename.Expand()
 	if err != nil {
 		return nil, err
@@ -301,4 +315,29 @@ func (f *FileAppend) OpenWriter() (io.Writer, error) {
 		}
 	}
 	return os.OpenFile(filename, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
+}
+
+// Instead of fixing my stupid implementation I
+// saw an opportunity to try iterators for the
+// first time
+func (r *Redirects) Nodes() iter.Seq[Node] {
+	return func(yield func(Node) bool) {
+		if r.StdIn != nil {
+			if !yield(r.StdIn) {
+				return
+			}
+		}
+
+		for _, n := range r.StdOut {
+			if !yield(n) {
+				return
+			}
+		}
+
+		for _, n := range r.StdErr {
+			if !yield(n) {
+				return
+			}
+		}
+	}
 }

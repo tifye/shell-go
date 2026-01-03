@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"strings"
 
 	"github.com/codecrafters-io/shell-starter-go/app/cmd"
@@ -114,15 +115,20 @@ func (p *parser) parseCommands() []*Command {
 		assert.NotNil(cmd)
 
 		if pipeIn != nil {
-			cmd.stdIn = pipeIn
-			pipeIn = nil
+			if cmd.Redirects.StdIn != nil {
+				// todo: no need to break here. Add support for multiple errors with source locations
+				p.errorf("cannot have multiple command input redirects")
+				break
+			}
+
+			cmd.Redirects.StdIn = pipeIn
 		}
 
 		cmds = append(cmds, cmd)
 
 		if p.isCurToken(tokenPipeline) {
 			pr, pw := io.Pipe()
-			cmd.stdOut = &PipeOutRedirect{p.curToken.pos, pw}
+			cmd.Redirects.StdOut = append(cmd.Redirects.StdOut, &PipeOutRedirect{p.curToken.pos, pw})
 			pipeIn = &PipeInRedirect{p.curToken.pos, pr}
 		}
 
@@ -154,19 +160,9 @@ func (p *parser) parseCommand() (pc *Command) {
 	}
 
 	pc.Args = p.parseArguments()
+	pc.Redirects = p.parseRedirects()
 
-	for {
-		switch p.curToken.typ {
-		case tokenRedirect:
-			p.parseRedirect(pc)
-			return
-		case tokenAppend:
-			p.parseAppend(pc)
-			return
-		default:
-			return
-		}
-	}
+	return pc
 }
 
 func (p *parser) parseArguments() (a *Arguments) {
@@ -201,6 +197,38 @@ func (p *parser) parseArguments() (a *Arguments) {
 	}
 }
 
+func (p *parser) parseRedirects() *Redirects {
+	r := &Redirects{
+		BeginPos: math.MaxInt,
+		EndPos:   math.MinInt,
+		StdOut:   make([]OutputTarget, 0),
+		StdErr:   make([]OutputTarget, 0),
+	}
+
+Loop:
+	for {
+		switch p.curToken.typ {
+		case tokenRedirect:
+			p.parseRedirect(r)
+		case tokenAppend:
+			p.parseRedirect(r)
+		default:
+			break Loop
+		}
+	}
+
+	for n := range r.Nodes() {
+		if n.Pos() < r.BeginPos {
+			r.BeginPos = n.Pos()
+		}
+		if n.End() > r.EndPos {
+			r.BeginPos = n.End()
+		}
+	}
+
+	return r
+}
+
 func (p *parser) parseVariable() *Variable {
 	assert.Assert(p.isCurToken(tokenVariable))
 
@@ -218,8 +246,7 @@ func (p *parser) parseVariable() *Variable {
 	return v
 }
 
-func (p *parser) parseRedirect(pc *Command) {
-	assert.NotNil(pc)
+func (p *parser) parseRedirect(r *Redirects) {
 	assert.Assert(p.isCurToken(tokenRedirect))
 
 	if !p.isPrevToken(tokenSpace) {
@@ -231,11 +258,11 @@ func (p *parser) parseRedirect(pc *Command) {
 
 	switch {
 	case strings.HasPrefix(p.curToken.literal, "1"):
-		pc.stdOut = file
+		r.StdOut = append(r.StdOut, file)
 	case strings.HasPrefix(p.curToken.literal, "2"):
-		pc.stdErr = file
+		r.StdErr = append(r.StdOut, file)
 	default:
-		pc.stdOut = file
+		r.StdOut = append(r.StdOut, file)
 	}
 
 	if !p.expectPeek(tokenSpace) {
@@ -260,8 +287,7 @@ func (p *parser) parseRedirect(pc *Command) {
 	}
 }
 
-func (p *parser) parseAppend(pc *Command) {
-	assert.NotNil(pc)
+func (p *parser) parseAppend(r *Redirects) {
 	assert.Assert(p.isCurToken(tokenAppend))
 
 	if !p.isPrevToken(tokenSpace) {
@@ -273,11 +299,11 @@ func (p *parser) parseAppend(pc *Command) {
 
 	switch {
 	case strings.HasPrefix(p.curToken.literal, "1"):
-		pc.stdOut = file
+		r.StdOut = append(r.StdOut, file)
 	case strings.HasPrefix(p.curToken.literal, "2"):
-		pc.stdErr = file
+		r.StdErr = append(r.StdOut, file)
 	default:
-		pc.stdOut = file
+		r.StdOut = append(r.StdOut, file)
 	}
 
 	if !p.expectPeek(tokenSpace) {
