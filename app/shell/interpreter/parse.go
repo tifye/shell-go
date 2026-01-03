@@ -211,7 +211,7 @@ Loop:
 		case tokenRedirect:
 			p.parseRedirect(r)
 		case tokenAppend:
-			p.parseRedirect(r)
+			p.parseAppend(r)
 		default:
 			break Loop
 		}
