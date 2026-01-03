@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"os"
 	"strings"
 
 	"github.com/codecrafters-io/shell-starter-go/app/cmd"
@@ -105,7 +106,9 @@ func (s *Shell) Run() error {
 	if histFile := s.Env.Get("HISTFILE"); len(histFile) > 0 {
 		err := history.ReadHistoryFromFile(s.HistoryContext, s.FS, s.Env.Get("HISTFILE"))
 		if err != nil {
-			fmt.Fprintf(s.Stderr, "failed to load command history: %s\n", err)
+			if !errors.Is(err, os.ErrNotExist) {
+				fmt.Fprintf(s.Stderr, "failed to load command history: %s\n", err)
+			}
 		}
 	}
 	defer func() {
