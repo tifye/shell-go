@@ -3,6 +3,7 @@ package terminal
 import (
 	"bytes"
 	"io"
+	"math/rand/v2"
 	"unicode/utf8"
 )
 
@@ -11,6 +12,7 @@ type TermWriter struct {
 }
 
 func NewTermWriter(w io.Writer) *TermWriter {
+	_, _ = w.Write(randomColor())
 	return &TermWriter{
 		w: w,
 	}
@@ -34,6 +36,8 @@ func (t *TermWriter) Write(p []byte) (n int, err error) {
 			return n, err
 		}
 		p = p[idx+1:]
+
+		_, _ = t.w.Write(randomColor())
 
 		_, err = t.w.Write(crlf)
 		// n is for how many bytes of
@@ -74,4 +78,19 @@ func (t *TermWriter) StageRune(r rune) {
 }
 func (t *TermWriter) Commit() {
 
+}
+
+var (
+	red     = []byte{keyEscape, '[', '3', '1', 'm'}
+	green   = []byte{keyEscape, '[', '3', '2', 'm'}
+	yello   = []byte{keyEscape, '[', '3', '3', 'm'}
+	blue    = []byte{keyEscape, '[', '3', '4', 'm'}
+	magenta = []byte{keyEscape, '[', '3', '5', 'm'}
+	cyan    = []byte{keyEscape, '[', '3', '6', 'm'}
+	colors  = [][]byte{red, green, yello, blue, magenta, cyan}
+)
+
+func randomColor() []byte {
+	i := rand.IntN(len(colors))
+	return colors[i]
 }
