@@ -31,6 +31,10 @@ func (p *Program) Run() error {
 }
 
 func (p *Program) runCommand(pc *Command) error {
+	if pc.Redirects != nil {
+		defer pc.Redirects.CloseAll()
+	}
+
 	cmdName, err := pc.Name.Expand()
 	if err != nil {
 		return fmt.Errorf("evaluating command name: %w", err)
@@ -41,7 +45,7 @@ func (p *Program) runCommand(pc *Command) error {
 
 	cmd, found, err := p.CommandLookupFunc(cmdName)
 	if err != nil {
-		return fmt.Errorf("lookuping cmd: %s", err)
+		return fmt.Errorf("looking up cmd: %s", err)
 	}
 	if !found {
 		return fmt.Errorf("%s: %w", cmdName, ErrCommandNotFound)
@@ -338,6 +342,32 @@ func (r *Redirects) Nodes() iter.Seq[Node] {
 			if !yield(n) {
 				return
 			}
+		}
+	}
+}
+
+// Nasty temp fix.
+// What I need to do is build
+// an actual interpreter and only let
+// these be the syntax tree. Currently
+// the program both defines the syntax tree
+// and runs the commands which causes stupid
+// things like this.
+func (r *Redirects) CloseAll() {
+	if r.StdIn != nil {
+		if r, err := r.StdIn.OpenReader(); err == nil {
+			r.Close()
+		}
+	}
+	for i := range r.StdOut {
+		if w, err := r.StdOut[i].OpenWriter(); err == nil {
+			w.Close()
+		}
+	}
+
+	for i := range r.StdErr {
+		if w, err := r.StdOut[i].OpenWriter(); err == nil {
+			w.Close()
 		}
 	}
 }
