@@ -32,10 +32,10 @@ type FS interface {
 }
 
 type Shell struct {
-	Stdout       io.Writer
-	Stderr       io.Writer
-	Stdin        io.Reader
-	builtins     []*cmd.Command
+	Stdout io.Writer
+	Stderr io.Writer
+	Stdin  io.Reader
+
 	Env          env
 	FS           FS
 	ExecFunc     func(cmd *cmd.Command, path string, args []string) error

@@ -13,6 +13,10 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+var (
+	ErrCommandNotFound = errors.New("command not found")
+)
+
 type (
 	CmdFunc       func(ctx context.Context, stdin io.Reader, stdout, stderr io.Writer, args []string) error
 	CmdLookupFunc func(name string) (cmd CmdFunc, found bool, err error)
