@@ -183,7 +183,7 @@ func (p *Interpreter) evalCmd(cmdStmt *ast.CommandStmt, r io.Reader, w io.Writer
 	}
 
 	stdouts := make([]io.Writer, 0)
-	stderrs := []io.Writer{p.stderr}
+	stderrs := make([]io.Writer, 0)
 
 	if w != nil {
 		stdouts = append(stdouts, w)
@@ -216,6 +216,10 @@ func (p *Interpreter) evalCmd(cmdStmt *ast.CommandStmt, r io.Reader, w io.Writer
 			defer c.Close()
 		}
 		stderrs = append(stderrs, wr)
+	}
+
+	if len(stderrs) == 0 {
+		stderrs = append(stderrs, p.stderr)
 	}
 
 	stdout := io.MultiWriter(stdouts...)
