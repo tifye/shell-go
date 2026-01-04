@@ -4,8 +4,8 @@ import (
 	"unicode/utf8"
 )
 
-type Program struct {
-	Chain []Statement
+type Root struct {
+	Cmds []Statement
 }
 
 type Node interface {
@@ -26,17 +26,17 @@ type Expression interface {
 type (
 	CommandStmt struct {
 		Name   Expression
-		Args   *ArgList
+		Args   *ArgsList
 		StdIn  Statement
 		StdOut []Statement
 		StdErr []Statement
 	}
 
 	PipeStmt struct {
-		Chain []*CommandStmt
+		Cmds []*CommandStmt
 	}
 
-	ArgList struct {
+	ArgsList struct {
 		Args []Expression
 	}
 
@@ -72,10 +72,10 @@ type (
 	}
 )
 
-func (x *Program) Pos() int     { return x.Chain[0].Pos() }
-func (x *PipeStmt) Pos() int    { return x.Chain[0].Pos() }
+func (x *Root) Pos() int        { return x.Cmds[0].Pos() }
+func (x *PipeStmt) Pos() int    { return x.Cmds[0].Pos() }
 func (x *CommandStmt) Pos() int { return x.Name.Pos() }
-func (x *ArgList) Pos() int {
+func (x *ArgsList) Pos() int {
 	if len(x.Args) == 0 {
 		return 0
 	}
@@ -88,8 +88,8 @@ func (x *RawTextExpr) Pos() int          { return x.ValuePos }
 func (x *SingleQuotedTextExpr) Pos() int { return x.ValuePos }
 func (x *DoubleQuotedTextExpr) Pos() int { return x.StartQuote }
 
-func (x *Program) End() int  { return x.Chain[0].End() }
-func (x *PipeStmt) End() int { return x.Chain[0].End() }
+func (x *Root) End() int     { return x.Cmds[0].End() }
+func (x *PipeStmt) End() int { return x.Cmds[0].End() }
 func (x *CommandStmt) End() int {
 	switch {
 	case len(x.Args.Args) > 0:
@@ -98,7 +98,7 @@ func (x *CommandStmt) End() int {
 		return x.Name.End()
 	}
 }
-func (x *ArgList) End() int {
+func (x *ArgsList) End() int {
 	if len(x.Args) == 0 {
 		return 0
 	}

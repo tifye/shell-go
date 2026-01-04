@@ -22,11 +22,11 @@ func Walk(v Visitor, node Node) {
 	}
 
 	switch n := node.(type) {
-	case *Program:
-		walkList(v, n.Chain)
+	case *Root:
+		walkList(v, n.Cmds)
 	case *PipeStmt:
-		walkList(v, n.Chain)
-	case *ArgList:
+		walkList(v, n.Cmds)
+	case *ArgsList:
 		walkList(v, n.Args)
 	case *CommandStmt:
 		Walk(v, n.Name)

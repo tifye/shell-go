@@ -15,7 +15,7 @@ func TestPipe(t *testing.T) {
 	Inspect(prog, func(n Node) bool {
 		switch n := n.(type) {
 		case *PipeStmt:
-			assert.Len(t, n.Chain, 3)
+			assert.Len(t, n.Cmds, 3)
 		}
 		return true
 	})
@@ -28,8 +28,8 @@ func TestSequential(t *testing.T) {
 
 	Inspect(prog, func(n Node) bool {
 		switch n := n.(type) {
-		case *Program:
-			assert.Len(t, n.Chain, 2)
+		case *Root:
+			assert.Len(t, n.Cmds, 2)
 		}
 		return false
 	})

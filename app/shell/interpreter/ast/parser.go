@@ -15,7 +15,7 @@ type Parser struct {
 	err       error
 }
 
-func Parse(input string) (*Program, error) {
+func Parse(input string) (*Root, error) {
 	l := newLexer(input)
 	p := NewParser(l)
 	return p.Parse(), p.err
@@ -27,11 +27,11 @@ func NewParser(l *lexer) *Parser {
 	}
 }
 
-func (p *Parser) Parse() *Program {
+func (p *Parser) Parse() *Root {
 	p.nextToken()
 	p.nextToken()
-	return &Program{
-		Chain: p.parseStatements(),
+	return &Root{
+		Cmds: p.parseStatements(),
 	}
 }
 
@@ -107,7 +107,7 @@ func (p *Parser) parsePipline(first *CommandStmt) *PipeStmt {
 	assert.Assert(p.isCurToken(tokenPipeline))
 
 	pipe := &PipeStmt{
-		Chain: []*CommandStmt{first},
+		Cmds: []*CommandStmt{first},
 	}
 
 	for p.isCurToken(tokenPipeline) {
@@ -118,7 +118,12 @@ func (p *Parser) parsePipline(first *CommandStmt) *PipeStmt {
 			break
 		}
 
-		pipe.Chain = append(pipe.Chain, cmd)
+		if cmd.StdIn != nil {
+			p.errorf("cannot redirect stdin for commands that are part of a pipeline")
+			break
+		}
+
+		pipe.Cmds = append(pipe.Cmds, cmd)
 	}
 
 	return pipe
@@ -174,16 +179,24 @@ Loop:
 	return cmd
 }
 
-func (p *Parser) parseArgsList() (a *ArgList) {
-	a = &ArgList{
+func (p *Parser) parseArgsList() (a *ArgsList) {
+	for p.isCurToken(tokenSpace) {
+		p.nextToken()
+	}
+
+	a = &ArgsList{
 		Args: make([]Expression, 0),
 	}
 	for {
 		switch p.curToken.typ {
 		case tokenText, tokenSpace, tokenEscaped:
-			a.Args = append(a.Args, p.parseText())
+			if s := p.parseText(); s.Literal != "" {
+				a.Args = append(a.Args, s)
+			}
 		case tokenSingleQuote:
-			a.Args = append(a.Args, p.parseSingleQuotes())
+			if s := p.parseSingleQuotes(); s.Literal != "" {
+				a.Args = append(a.Args, s)
+			}
 		case tokenDoubleQuote:
 			a.Args = append(a.Args, p.parseDoubleQuotes())
 		case tokenVariable:
