@@ -183,7 +183,7 @@ func (p *Interpreter) evalCmd(cmdStmt *ast.CommandStmt, r io.Reader, w io.Writer
 	}
 
 	stdouts := make([]io.Writer, 0)
-	stderrs := make([]io.Writer, 0)
+	stderrs := []io.Writer{p.stderr}
 
 	if w != nil {
 		stdouts = append(stdouts, w)
