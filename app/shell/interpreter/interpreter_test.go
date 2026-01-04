@@ -2,6 +2,7 @@ package interpreter
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -24,7 +25,7 @@ func TestInterpreter(t *testing.T) {
 		}),
 		WithCmdLookupFunc(func(name string) (cmd CmdFunc, found bool, err error) {
 			assert.Equal(t, "echo", name)
-			return func(stdin io.Reader, stdout, stderr io.Writer, args []string) error {
+			return func(_ context.Context, stdin io.Reader, stdout, stderr io.Writer, args []string) error {
 				assert.NotNil(t, stdin)
 				assert.NotNil(t, stderr)
 				if assert.NotNil(t, stdout) {
@@ -45,13 +46,48 @@ func TestInterpreter(t *testing.T) {
 	})
 }
 
+func TestPipeline(t *testing.T) {
+	input := `echo 1 | echo 2`
+	outBuf := bytes.NewBuffer(nil)
+	interpStdin := strings.NewReader(input)
+	interp := NewInterpreter(
+		WithIO(interpStdin, outBuf, outBuf),
+		WithCmdLookupFunc(func(name string) (cmd CmdFunc, found bool, err error) {
+			assert.Equal(t, "echo", name)
+			return func(_ context.Context, stdin io.Reader, stdout, stderr io.Writer, args []string) error {
+				assert.NotNil(t, stdin)
+				assert.NotNil(t, stderr)
+
+				if stdin != interpStdin {
+					_, err := io.Copy(stdout, stdin)
+					assert.NoError(t, err)
+				}
+
+				if assert.NotNil(t, stdout) {
+					fmt.Fprintln(stdout, strings.Join(args, " "))
+				}
+				return nil
+			}, true, nil
+		}),
+	)
+
+	synctest.Test(t, func(t *testing.T) {
+		err := interp.Evaluate(input)
+		require.NoError(t, err)
+
+		output := outBuf.String()
+		expected := "echo 1\necho 2\n"
+		assert.Equal(t, expected, output)
+	})
+}
+
 func TestRedirect(t *testing.T) {
 	input := `echo 1 >> test; echo 2 > test`
 	outBuf := bytes.NewBuffer(nil)
 	interp := NewInterpreter(
 		WithCmdLookupFunc(func(name string) (cmd CmdFunc, found bool, err error) {
 			assert.Equal(t, "echo", name)
-			return func(stdin io.Reader, stdout, stderr io.Writer, args []string) error {
+			return func(_ context.Context, stdin io.Reader, stdout, stderr io.Writer, args []string) error {
 				assert.NotNil(t, stdin)
 				assert.NotNil(t, stderr)
 				if assert.NotNil(t, stdout) {
@@ -167,7 +203,7 @@ func TestInterpretSingleCommands(t *testing.T) {
 					return "<HOME>"
 				}),
 				WithCmdLookupFunc(func(name string) (cmd CmdFunc, found bool, err error) {
-					return func(stdin io.Reader, stdout, stderr io.Writer, args []string) error {
+					return func(_ context.Context, stdin io.Reader, stdout, stderr io.Writer, args []string) error {
 						assert.EqualValues(t, test.expectedArgs, args)
 						return nil
 					}, true, nil

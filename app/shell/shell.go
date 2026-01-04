@@ -1,6 +1,7 @@
 package shell
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -45,10 +46,10 @@ type Shell struct {
 	HistoryContext  *history.HistoryContext
 	CommandRegistry *cmd.Registry
 
+	interp        *interpreter.Interpreter
 	autocompleter *autocompleter
-
-	tr *terminal.TermReader
-	tw *terminal.TermWriter
+	tr            *terminal.TermReader
+	tw            *terminal.TermWriter
 }
 
 func (s *Shell) buildPathCommandFunc(exec, path string) cmd.CommandFunc {
@@ -103,6 +104,15 @@ func (s *Shell) Run() error {
 		},
 	}
 
+	s.interp = interpreter.NewInterpreter(
+		interpreter.WithIO(s.Stdin, s.Stdout, s.Stderr),
+		interpreter.WithEnvFunc(s.Env.Get),
+		interpreter.WithCmdLookupFunc(s.LookupCommand),
+		interpreter.WithOpenFileFunc(func(name string, flags int, fm os.FileMode) (io.ReadWriteCloser, error) {
+			return s.FS.OpenFile(name, flags)
+		}),
+	)
+
 	if histFile := s.Env.Get("HISTFILE"); len(histFile) > 0 {
 		err := history.ReadHistoryFromFile(s.HistoryContext, s.FS, s.Env.Get("HISTFILE"))
 		if err != nil {
@@ -142,26 +152,17 @@ func (s *Shell) repl() {
 
 		s.HistoryContext.Add(input)
 
-		prog, err := interpreter.Parse(input, s, s.Env.Get)
-		if err != nil {
-			if errors.Is(err, interpreter.ErrCommandNotFound) {
-				_, _ = fmt.Fprintln(s.Stdout, err)
-			} else {
-				_, _ = fmt.Fprintf(s.Stdout, "error parsing input: %s\n", err)
-			}
-			continue
-		}
-
-		if err := prog.Run(); err != nil {
+		if err = s.interp.Evaluate(input); err != nil {
 			if errors.Is(err, ErrExit) {
 				return
 			}
 
 			if errors.Is(err, interpreter.ErrCommandNotFound) {
-				_, _ = fmt.Fprintln(s.Stderr, err)
+				_, _ = fmt.Fprintln(s.Stdout, err)
 			} else {
-				_, _ = fmt.Fprintf(s.Stderr, "error executing: %s\n", err)
+				_, _ = fmt.Fprintf(s.Stdout, "error: %s\n", err)
 			}
+			continue
 		}
 	}
 }
@@ -195,18 +196,16 @@ func (s *Shell) read() (string, error) {
 	}
 }
 
-func (s *Shell) LookupCommand(name string) (cmd *cmd.Command, found bool, err error) {
-	assert.Assert(len(name) > 0)
-
-	cmd, found = s.CommandRegistry.LookupCommand(name)
+func (s *Shell) LookupCommand(name string) (f interpreter.CmdFunc, found bool, err error) {
+	cmd, found := s.CommandRegistry.LookupCommand(name)
 	if !found {
 		return nil, false, nil
 	}
 
-	assert.NotNil(cmd, "cmd")
-	cmd.Stdin = s.Stdin
-	cmd.Stderr = s.Stderr
-	cmd.Stdout = s.Stdout
-
-	return
+	return func(_ context.Context, stdin io.Reader, stdout, stderr io.Writer, args []string) error {
+		cmd.Stdin = stdin
+		cmd.Stdout = stdout
+		cmd.Stderr = stderr
+		return cmd.Run(cmd, args)
+	}, true, nil
 }

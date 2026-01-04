@@ -1,6 +1,7 @@
 package interpreter
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -13,7 +14,7 @@ import (
 )
 
 type (
-	CmdFunc       func(stdin io.Reader, stdout, stderr io.Writer, args []string) error
+	CmdFunc       func(ctx context.Context, stdin io.Reader, stdout, stderr io.Writer, args []string) error
 	CmdLookupFunc func(name string) (cmd CmdFunc, found bool, err error)
 	EnvFunc       func(string) string
 	OpenFileFunc  func(string, int, os.FileMode) (io.ReadWriteCloser, error)
@@ -130,15 +131,20 @@ func (p *Interpreter) evalPipeline(pipe *ast.PipeStmt) error {
 	var pr *io.PipeReader
 	for i := 0; i < len(pipe.Cmds)-1; i++ {
 		nextReader, pw := io.Pipe()
+
+		var r io.Reader
+		if pr != nil {
+			r = &ignoreClosedPipeRead{pr}
+		}
 		eg.Go(func() error {
-			return p.evalCmd(pipe.Cmds[0], pr, &ignoreClosedPipe{pw})
+			return p.evalCmd(pipe.Cmds[i], r, &ignoreClosedPipeWrite{pw})
 		})
 
 		pr = nextReader
 	}
 
 	eg.Go(func() error {
-		return p.evalCmd(pipe.Cmds[len(pipe.Cmds)-1], pr, p.stdout)
+		return p.evalCmd(pipe.Cmds[len(pipe.Cmds)-1], &ignoreClosedPipeRead{pr}, nil)
 	})
 
 	return eg.Wait()
@@ -175,8 +181,15 @@ func (p *Interpreter) evalCmd(cmdStmt *ast.CommandStmt, r io.Reader, w io.Writer
 	stdouts := make([]io.Writer, 0)
 	stderrs := make([]io.Writer, 0)
 
-	if len(cmdStmt.StdOut) == 0 && w == nil {
-		stdouts = append(stdouts, p.stdout)
+	if w != nil {
+		stdouts = append(stdouts, w)
+		if c, ok := w.(io.Closer); ok {
+			defer c.Close()
+		}
+	} else {
+		if len(cmdStmt.StdOut) == 0 {
+			stdouts = append(stdouts, p.stdout)
+		}
 	}
 
 	for _, n := range cmdStmt.StdOut {
@@ -204,7 +217,7 @@ func (p *Interpreter) evalCmd(cmdStmt *ast.CommandStmt, r io.Reader, w io.Writer
 	stdout := io.MultiWriter(stdouts...)
 	stderr := io.MultiWriter(stderrs...)
 
-	return cmdFunc(r, stdout, stderr, args)
+	return cmdFunc(context.TODO(), r, stdout, stderr, args)
 }
 
 func (p *Interpreter) evalStdOutStmt(stmt ast.Statement) (io.Writer, error) {
@@ -268,14 +281,25 @@ func (p *Interpreter) evalArgsList(argsList *ast.ArgsList) ([]string, error) {
 	return args, nil
 }
 
-type ignoreClosedPipe struct {
+type ignoreClosedPipeWrite struct {
 	*io.PipeWriter
 }
+type ignoreClosedPipeRead struct {
+	*io.PipeReader
+}
 
-func (p *ignoreClosedPipe) Write(b []byte) (int, error) {
+func (p *ignoreClosedPipeWrite) Write(b []byte) (int, error) {
 	n, err := p.PipeWriter.Write(b)
 	if errors.Is(err, io.ErrClosedPipe) {
 		return len(b), nil
+	}
+	return n, err
+}
+
+func (p *ignoreClosedPipeRead) Read(b []byte) (int, error) {
+	n, err := p.PipeReader.Read(b)
+	if errors.Is(err, io.ErrClosedPipe) {
+		return len(b), io.EOF
 	}
 	return n, err
 }
