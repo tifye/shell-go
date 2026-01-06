@@ -1,10 +1,12 @@
 version: '3'
 
+dotenv: ['.env']
+
 tasks:
   build-shigure:
     dir: ./shigure/
     cmds:
-      - go build -o ./build/shell.wasm
+      - go build -o "$PERSONAL_SITE_DIR/public/shell.wasm"
     env:
       GOOS: js
       GOARCH: wasm

@@ -6,8 +6,9 @@ import (
 	"os"
 	"syscall/js"
 
-	"github.com/codecrafters-io/shell-starter-go/app/builtin"
+	"github.com/codecrafters-io/shell-starter-go/app/cmd"
 	"github.com/codecrafters-io/shell-starter-go/app/shell"
+	"github.com/codecrafters-io/shell-starter-go/app/shell/history"
 )
 
 func main() {
@@ -37,17 +38,22 @@ func main() {
 			_ = exports.Call("output", string(b))
 			return len(b), nil
 		}),
-		Stdin:    pr,
-		Env:      env{},
-		FS:       filesystem{},
-		Exec:     exec,
-		FullPath: fullpath,
+		Stderr: writeFunc(func(b []byte) (int, error) {
+			_ = exports.Call("output", string(b))
+			return len(b), nil
+		}),
+		Stdin:          pr,
+		Env:            env{},
+		FS:             filesystem{},
+		HistoryContext: history.NewHistoryContext(history.NewInMemoryHistory()),
+		ExecFunc: func(cmd *cmd.Command, path string, args []string) error {
+			fmt.Println(args)
+			return nil
+		},
+		FullPathFunc: func(s string) (string, error) {
+			return s, nil
+		},
 	}
-	s.AddBuiltins(
-		builtin.NewExitCommand(s),
-		builtin.NewEchoCommand(s),
-		builtin.NewTypeCommand(s),
-	)
 	if err := s.Run(); err != nil {
 		panic(err)
 	}
@@ -69,13 +75,4 @@ type env struct{}
 
 func (e env) Get(key string) string {
 	return os.Getenv(key)
-}
-
-func exec(s *shell.Shell, path string, args []string) error {
-	fmt.Println(path)
-	return nil
-}
-
-func fullpath(path string) (string, error) {
-	return path, nil
 }
