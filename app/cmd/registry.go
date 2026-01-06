@@ -120,9 +120,10 @@ func LoadFromPathEnv(
 	fullPath func(string) (string, error),
 	buildCmdFunc func(exec string, path string) CommandFunc,
 ) (*Registry, error) {
-	assert.Assert(len(pathEnv) > 0, "expected non-empty pathEnv")
-
 	registry := NewResitry(buildCmdFunc)
+	if strings.TrimSpace(pathEnv) == "" {
+		return registry, nil
+	}
 
 	paths := filepath.SplitList(pathEnv)
 	for _, p := range paths {
