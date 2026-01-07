@@ -223,6 +223,20 @@ func (p *Parser) parseVariable() *VariableExpr {
 	return v
 }
 
+func (p *Parser) parseEscaped() string {
+	assert.Assert(p.isCurToken(tokenEscaped))
+
+	char := strings.TrimPrefix(p.curToken.literal, `\`)
+	switch char {
+	case "t":
+		return "\t"
+	case "n":
+		return "\n"
+	default:
+		return char
+	}
+}
+
 func (p *Parser) parseText() *RawTextExpr {
 	str := ""
 	for {
@@ -232,8 +246,11 @@ func (p *Parser) parseText() *RawTextExpr {
 			if len(str) > 0 {
 				return &RawTextExpr{Literal: str}
 			}
-		case tokenText, tokenEscaped:
+		case tokenText:
 			str += strings.TrimPrefix(p.curToken.literal, `\`)
+			p.nextToken()
+		case tokenEscaped:
+			str += p.parseEscaped()
 			p.nextToken()
 		case tokenSingleQuote:
 			if !p.isPeekToken(tokenSingleQuote) {
