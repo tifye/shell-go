@@ -67,12 +67,14 @@ func (t *TermWriter) Stage(p []byte) {
 		t.buf = append(t.buf, randomColor()...)
 	}
 }
+
 func (t *TermWriter) StageRune(r rune) {
 	b := make([]byte, 8)
 	n := utf8.EncodeRune(b, r)
 	b = b[:n]
 	t.Stage(b)
 }
+
 func (t *TermWriter) Commit() (int, error) {
 	n, err := t.w.Write(t.buf)
 	if err != nil {

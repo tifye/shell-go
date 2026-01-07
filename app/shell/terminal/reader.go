@@ -14,12 +14,13 @@ import (
 // ANSI escape sequences
 // https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797
 const (
-	keyCtrlC = 3 // ^C
-	keyCtrlD = 4
-	keyCtrlU = 21
-	keyEnter = '\r'
-	keyLF    = '\n'
-	keyTab   = '\t'
+	keyCtrlC     = 3 // ^C
+	keyCtrlD     = 4
+	keyCtrlU     = 21
+	keyBackSpace = 8
+	keyEnter     = '\r'
+	keyLF        = '\n'
+	keyTab       = '\t'
 
 	keyEscape byte = 0x1B // 27
 	// Control Sequence Introducer
@@ -60,6 +61,7 @@ const (
 	ItemKeyCtrlC
 	ItemKeyCtrlL
 	ItemKeyTab
+	ItemBackspace
 	ItemKeyUnknown
 )
 
@@ -113,6 +115,17 @@ func (t *TermReader) ReplaceWith(input string) error {
 	t.tw.Write([]byte{keyEscape, csi, 'K'})
 	t.tw.WriteString(input)
 	return nil
+}
+
+func (t *TermReader) EraseLastKey() {
+	if len(t.line) == 0 {
+		return
+	}
+
+	t.line = t.line[:len(t.line)-1]
+	t.tw.Stage([]byte{0x1b, '[', '1', 'D'})
+	t.tw.Stage([]byte{0x1b, '[', '0', 'K'})
+	t.tw.Commit()
 }
 
 func (t *TermReader) error(e error) stateFunc {
@@ -183,13 +196,16 @@ func readKey(t *TermReader) stateFunc {
 	case keyCtrlC:
 		t.advanceView(1)
 		return t.emit(ItemKeyCtrlC, string(b))
-	case 0x0C: // ^L
+	case keyBackSpace:
+		t.advanceView(1)
+		return t.emit(ItemBackspace, string(b))
+	case 12: // ^L
 		t.advanceView(1)
 		return t.emit(ItemKeyCtrlL, string(b))
-	case 0x0E: // ^N
+	case 14: // ^N
 		t.advanceView(1)
 		return t.emit(ItemKeyDown, string(b))
-	case 0x10: // ^P
+	case 16: // ^P
 		t.advanceView(1)
 		return t.emit(ItemKeyUp, string(b))
 	}

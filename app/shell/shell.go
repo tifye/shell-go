@@ -191,6 +191,8 @@ func (s *Shell) read() (string, error) {
 			if ok {
 				s.tr.ReplaceWith("$ " + line)
 			}
+		case terminal.ItemBackspace:
+			s.tr.EraseLastKey()
 		case terminal.ItemKeyCtrlL:
 			line := s.tr.Line()
 			s.tw.Stage([]byte{0x1b, '[', '2', 'J'}) // clear terminal
