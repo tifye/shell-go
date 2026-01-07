@@ -89,6 +89,7 @@ func (s *Shell) Run() error {
 		registry.AddBuiltinCommand("exit", NewExitCommandFunc())
 		registry.AddBuiltinCommand("pwd", NewPWDCommandFunc(s))
 		registry.AddBuiltinCommand("cd", NewCDCommandFunc(s))
+		registry.AddBuiltinCommand("clear", NewClearCommandFunc())
 
 		s.CommandRegistry = registry
 	}
@@ -190,6 +191,13 @@ func (s *Shell) read() (string, error) {
 			if ok {
 				s.tr.ReplaceWith("$ " + line)
 			}
+		case terminal.ItemKeyCtrlL:
+			line := s.tr.Line()
+			s.tw.Stage([]byte{0x1b, '[', '2', 'J'}) // clear terminal
+			s.tw.Stage([]byte{'\r'})                // return cursor to start
+			s.tw.Stage([]byte("$ " + line))
+			s.tw.Commit()
+
 		default:
 			fmt.Println("default")
 		}

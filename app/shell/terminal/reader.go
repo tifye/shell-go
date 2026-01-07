@@ -58,6 +58,7 @@ const (
 	ItemKeyUp
 	ItemKeyDown
 	ItemKeyCtrlC
+	ItemKeyCtrlL
 	ItemKeyTab
 	ItemKeyUnknown
 )
@@ -182,10 +183,13 @@ func readKey(t *TermReader) stateFunc {
 	case keyCtrlC:
 		t.advanceView(1)
 		return t.emit(ItemKeyCtrlC, string(b))
-	case 14: // ^N
+	case 0x0C: // ^L
+		t.advanceView(1)
+		return t.emit(ItemKeyCtrlL, string(b))
+	case 0x0E: // ^N
 		t.advanceView(1)
 		return t.emit(ItemKeyDown, string(b))
-	case 16: // ^P
+	case 0x10: // ^P
 		t.advanceView(1)
 		return t.emit(ItemKeyUp, string(b))
 	}
