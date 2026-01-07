@@ -228,10 +228,10 @@ func (p *Parser) parseEscaped() string {
 
 	char := strings.TrimPrefix(p.curToken.literal, `\`)
 	switch char {
-	case "t":
-		return "\t"
-	case "n":
-		return "\n"
+	// case "t":
+	// 	return "\t"
+	// case "n":
+	// 	return "\n"
 	default:
 		return char
 	}
