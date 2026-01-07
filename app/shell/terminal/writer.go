@@ -37,9 +37,8 @@ func (t *TermWriter) Write(p []byte) (n int, err error) {
 		}
 		p = p[idx+1:]
 
-		_, _ = t.w.Write(randomColor())
-
 		_, err = t.w.Write(crlf)
+		_, _ = t.w.Write(randomColor())
 		// n is for how many bytes of
 		// the original p that was written
 		n += 1
