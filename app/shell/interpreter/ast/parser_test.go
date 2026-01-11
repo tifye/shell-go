@@ -34,3 +34,23 @@ func TestSequential(t *testing.T) {
 		return false
 	})
 }
+
+func TestBackground(t *testing.T) {
+	input := `echo 1 | echo 2 &`
+	prog, err := Parse(input)
+	require.NoError(t, err)
+
+	called := false
+	Inspect(prog, func(n Node) bool {
+		switch n := n.(type) {
+		case *BackgroundStmt:
+			called = true
+			assert.IsType(t, &PipeStmt{}, n.Stmt)
+
+			return false
+		}
+		return true
+	})
+
+	assert.True(t, called)
+}

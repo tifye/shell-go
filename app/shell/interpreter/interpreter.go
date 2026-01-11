@@ -107,7 +107,7 @@ func (p *Interpreter) eval(n ast.Node) error {
 	case *ast.Root:
 		return p.evalSequential(n.Cmds)
 	case *ast.PipeStmt:
-		return p.evalPipeline(n)
+		return p.evalPipeline(n, nil)
 	case *ast.CommandStmt:
 		return p.evalCmd(n, nil, nil)
 	}
@@ -123,7 +123,14 @@ func (p *Interpreter) evalSequential(stmts []ast.Statement) error {
 	return nil
 }
 
-func (p *Interpreter) evalPipeline(pipe *ast.PipeStmt) error {
+func (p *Interpreter) evalBackground(bg *ast.BackgroundStmt) error {
+	panic("evaluation of background commands is not yet supported")
+	return nil
+}
+
+// evalPipeline evaluates a pipline statement optionally overriding the output
+// passed in out if no-nil.
+func (p *Interpreter) evalPipeline(pipe *ast.PipeStmt, out io.Writer) error {
 	if len(pipe.Cmds) == 0 {
 		return nil
 	}
@@ -148,7 +155,7 @@ func (p *Interpreter) evalPipeline(pipe *ast.PipeStmt) error {
 	}
 
 	eg.Go(func() error {
-		return p.evalCmd(pipe.Cmds[len(pipe.Cmds)-1], &ignoreClosedPipeRead{pr}, nil)
+		return p.evalCmd(pipe.Cmds[len(pipe.Cmds)-1], &ignoreClosedPipeRead{pr}, out)
 	})
 
 	return eg.Wait()

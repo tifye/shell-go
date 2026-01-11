@@ -73,6 +73,7 @@ func (s *Shell) Run() error {
 
 	s.tw = terminal.NewTermWriter(s.Stdout)
 	s.tr = terminal.NewTermReader(s.Stdin, s.tw)
+	s.tr.CharacterReadHook = s.characterReadHook
 	s.Stdout = s.tw
 	s.Stderr = s.tw
 
@@ -191,19 +192,36 @@ func (s *Shell) read() (string, error) {
 			if ok {
 				s.tr.ReplaceWith("$ " + line)
 			}
-		case terminal.ItemBackspace:
-			s.tr.EraseLastKey()
 		case terminal.ItemKeyCtrlL:
 			line := s.tr.Line()
 			s.tw.Stage([]byte{0x1b, '[', '2', 'J'}) // clear terminal
 			s.tw.Stage([]byte{'\r'})                // return cursor to start
 			s.tw.Stage([]byte("$ " + line))
 			s.tw.Commit()
-
 		default:
 			fmt.Println("default")
 		}
 	}
+}
+
+func (s *Shell) suggestAutocomplete() {
+	line := s.tr.Line()
+	if line == "" {
+		return
+	}
+
+	match, ok := s.CommandRegistry.MatchFirst(line)
+	if !ok {
+		return
+	}
+
+	suggestion := match[len(line):]
+	s.tr.Suggest(suggestion)
+
+}
+
+func (s *Shell) characterReadHook(_ rune) {
+	s.suggestAutocomplete()
 }
 
 func (s *Shell) LookupCommand(name string) (f interpreter.CmdFunc, found bool, err error) {

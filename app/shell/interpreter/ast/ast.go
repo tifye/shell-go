@@ -36,6 +36,11 @@ type (
 		Cmds []*CommandStmt
 	}
 
+	BackgroundStmt struct {
+		AmpersandPos int
+		Stmt         Statement
+	}
+
 	ArgsList struct {
 		Args []Expression
 	}
@@ -87,6 +92,7 @@ func (x *VariableExpr) Pos() int         { return x.ValuePos }
 func (x *RawTextExpr) Pos() int          { return x.ValuePos }
 func (x *SingleQuotedTextExpr) Pos() int { return x.ValuePos }
 func (x *DoubleQuotedTextExpr) Pos() int { return x.StartQuote }
+func (x *BackgroundStmt) Pos() int       { return x.Stmt.Pos() }
 
 func (x *Root) End() int     { return x.Cmds[0].End() }
 func (x *PipeStmt) End() int { return x.Cmds[0].End() }
@@ -110,11 +116,13 @@ func (x *VariableExpr) End() int         { return x.ValuePos + utf8.RuneCountInS
 func (x *RawTextExpr) End() int          { return x.ValuePos }
 func (x *SingleQuotedTextExpr) End() int { return x.ValuePos }
 func (x *DoubleQuotedTextExpr) End() int { return x.StartQuote }
+func (x *BackgroundStmt) End() int       { return x.AmpersandPos }
 
-func (*PipeStmt) stmtNode()     {}
-func (*CommandStmt) stmtNode()  {}
-func (*AppendStmt) stmtNode()   {}
-func (*RedirectStmt) stmtNode() {}
+func (*PipeStmt) stmtNode()       {}
+func (*CommandStmt) stmtNode()    {}
+func (*AppendStmt) stmtNode()     {}
+func (*RedirectStmt) stmtNode()   {}
+func (*BackgroundStmt) stmtNode() {}
 
 func (*VariableExpr) exprNode()         {}
 func (*RawTextExpr) exprNode()          {}

@@ -3,20 +3,24 @@ package terminal
 import (
 	"bytes"
 	"io"
-	"math/rand/v2"
+	"strconv"
 	"unicode/utf8"
 )
 
 type TermWriter struct {
 	w   io.Writer
 	buf []byte
+
+	fgColorStack *ColorStack
 }
 
 func NewTermWriter(w io.Writer) *TermWriter {
-	_, _ = w.Write(randomColor())
-	return &TermWriter{
-		w: w,
+	t := &TermWriter{
+		w:            w,
+		fgColorStack: newColorStack(),
 	}
+	t.StagePushForegroundColor(purple)
+	return t
 }
 
 func (t *TermWriter) Write(p []byte) (n int, err error) {
@@ -64,7 +68,6 @@ func (t *TermWriter) Stage(p []byte) {
 		p = p[idx+1:]
 
 		t.buf = append(t.buf, crlf...)
-		t.buf = append(t.buf, randomColor()...)
 	}
 }
 
@@ -86,6 +89,39 @@ func (t *TermWriter) Commit() (int, error) {
 	return n, nil
 }
 
+func (t *TermWriter) StageMove(deltaX int) {
+	if deltaX == 0 {
+		return
+	}
+
+	var direction byte
+	var distance int
+
+	if deltaX > 0 {
+		direction = 'C' // right
+		distance = deltaX
+	} else {
+		direction = 'D' // left
+		distance = -deltaX
+	}
+
+	moveSeq := []byte{keyEscape, '['}
+	moveSeq = strconv.AppendInt(moveSeq, int64(distance), 10)
+	moveSeq = append(moveSeq, direction)
+	t.Stage(moveSeq)
+}
+
+func (t *TermWriter) StagePushForegroundColor(c []byte) {
+	t.fgColorStack.Push(c)
+	t.Stage(c)
+}
+
+func (t *TermWriter) StagePopForegroundColor() {
+	t.fgColorStack.Pop()
+	c := t.fgColorStack.Top()
+	t.Stage(c)
+}
+
 var (
 	red     = []byte{keyEscape, '[', '3', '1', 'm'}
 	green   = []byte{keyEscape, '[', '3', '2', 'm'}
@@ -93,10 +129,8 @@ var (
 	blue    = []byte{keyEscape, '[', '3', '4', 'm'}
 	magenta = []byte{keyEscape, '[', '3', '5', 'm'}
 	cyan    = []byte{keyEscape, '[', '3', '6', 'm'}
-	colors  = [][]byte{red, green, yello, blue, magenta, cyan}
-)
+	purple  = []byte{keyEscape, '[', '3', '8', ';', '5', ';', '1', '4', '1', 'm'}
 
-func randomColor() []byte {
-	i := rand.IntN(len(colors))
-	return colors[i]
-}
+	grey       = []byte{keyEscape, '[', '9', '0', 'm'}
+	resetColor = []byte{keyEscape, '[', '0', 'm'}
+)

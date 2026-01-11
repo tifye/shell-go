@@ -43,6 +43,21 @@ func (a *autocompleter) Complete(input string) (string, bool) {
 	return "", false
 }
 
+// MatchFirst tried to complete the input and
+// returns the first match it finds. It does not
+// ring the bell or check any possible completions.
+func (a *autocompleter) MatchFirst(input string) (string, bool) {
+	escaped := regexp.QuoteMeta(input)
+	reg, _ := regexp.Compile(fmt.Sprintf("^(%s)+.*", escaped))
+	matches := a.registry.MatchAll(reg)
+	if len(matches) > 0 {
+		a.bellRung = false
+		return matches[0], true
+	}
+
+	return "", false
+}
+
 func (a *autocompleter) ringTheBell() bool {
 	if a.bellRung {
 		return false

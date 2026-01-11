@@ -40,6 +40,8 @@ func Walk(v Visitor, node Node) {
 		Walk(v, n.Filename)
 	case *DoubleQuotedTextExpr:
 		walkList(v, n.Expressions)
+	case *BackgroundStmt:
+		Walk(v, n.Stmt)
 	case *VariableExpr, *SingleQuotedTextExpr, *RawTextExpr:
 	default:
 		panic("cannot walk node of type: " + reflect.TypeOf(n).String())

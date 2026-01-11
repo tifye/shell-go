@@ -80,6 +80,8 @@ type TermReader struct {
 	item Item
 	view []byte
 	buf  [256]byte
+
+	CharacterReadHook func(r rune)
 }
 
 func NewTermReader(r io.Reader, tw *TermWriter) *TermReader {
@@ -117,7 +119,17 @@ func (t *TermReader) ReplaceWith(input string) error {
 	return nil
 }
 
-func (t *TermReader) EraseLastKey() {
+func (t *TermReader) Suggest(s string) error {
+	t.tw.Stage([]byte{keyEscape, '[', '0', 'K'})
+	t.tw.StagePushForegroundColor(grey)
+	t.tw.Stage([]byte(s))
+	t.tw.StageMove(-len(s))
+	t.tw.StagePopForegroundColor()
+	_, err := t.tw.Commit()
+	return err
+}
+
+func (t *TermReader) eraseLastKey() {
 	if len(t.line) == 0 {
 		return
 	}
@@ -197,8 +209,7 @@ func readKey(t *TermReader) stateFunc {
 		t.advanceView(1)
 		return t.emit(ItemKeyCtrlC, string(b))
 	case keyBackSpace:
-		t.advanceView(1)
-		return t.emit(ItemBackspace, string(b))
+		return handleKey
 	case 12: // ^L
 		t.advanceView(1)
 		return t.emit(ItemKeyCtrlL, string(b))
@@ -255,6 +266,9 @@ func handleKey(t *TermReader) stateFunc {
 		return t.emit(ItemKeyTab, string(key))
 	case keyEnter, keyLF:
 		return handleEnterKey
+	case keyBackSpace:
+		t.eraseLastKey()
+		return readInput
 	default:
 		if key >= 32 {
 			return t.addToLine(key)
@@ -278,5 +292,9 @@ func (t *TermReader) addToLine(r rune) stateFunc {
 	t.line = append(t.line, r)
 	t.tw.StageRune(r)
 	t.tw.Commit()
+
+	if t.CharacterReadHook != nil {
+		t.CharacterReadHook(r)
+	}
 	return readInput
 }

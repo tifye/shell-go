@@ -92,15 +92,33 @@ func (p *Parser) parseStatements() []Statement {
 
 		switch p.curToken.typ {
 		case tokenPipeline:
-			stmts = append(stmts, p.parsePipline(cmd))
+			pipe := p.parsePipline(cmd)
+			if p.isCurToken(tokenAmpersand) {
+				stmts = append(stmts, p.parseBackground(pipe))
+				p.nextToken()
+			} else {
+				stmts = append(stmts, pipe)
+			}
+		case tokenAmpersand:
+			stmts = append(stmts, p.parseBackground(cmd))
 		default:
 			stmts = append(stmts, cmd)
+			p.nextToken()
 		}
-
-		p.nextToken()
 	}
 
 	return stmts
+}
+
+func (p *Parser) parseBackground(stmt Statement) *BackgroundStmt {
+	assert.Assert(p.isCurToken(tokenAmpersand))
+
+	bg := &BackgroundStmt{
+		AmpersandPos: p.curToken.pos,
+		Stmt:         stmt,
+	}
+
+	return bg
 }
 
 func (p *Parser) parsePipline(first *CommandStmt) *PipeStmt {
