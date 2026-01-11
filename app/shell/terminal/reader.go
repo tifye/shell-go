@@ -17,7 +17,8 @@ const (
 	keyCtrlC     = 3 // ^C
 	keyCtrlD     = 4
 	keyCtrlU     = 21
-	keyBackSpace = 8
+	keyBackspace = 8
+	keyDelete    = 127
 	keyEnter     = '\r'
 	keyLF        = '\n'
 	keyTab       = '\t'
@@ -25,8 +26,6 @@ const (
 	keyEscape byte = 0x1B // 27
 	// Control Sequence Introducer
 	csi byte = 0x5B // '['
-
-	keyBackspace = 127
 
 	keyUnknown = 0xd800 /* UTF-16 surrogate area */ + iota
 	keyUp
@@ -208,7 +207,7 @@ func readKey(t *TermReader) stateFunc {
 	case keyCtrlC:
 		t.advanceView(1)
 		return t.emit(ItemKeyCtrlC, string(b))
-	case keyBackSpace:
+	case keyBackspace, keyDelete:
 		return handleKey
 	case 12: // ^L
 		t.advanceView(1)
@@ -266,7 +265,7 @@ func handleKey(t *TermReader) stateFunc {
 		return t.emit(ItemKeyTab, string(key))
 	case keyEnter, keyLF:
 		return handleEnterKey
-	case keyBackSpace:
+	case keyBackspace, keyDelete:
 		t.eraseLastKey()
 		return readInput
 	default:
