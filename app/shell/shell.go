@@ -48,7 +48,7 @@ type Shell struct {
 
 	interp        *interpreter.Interpreter
 	autocompleter *autocompleter
-	tr            *terminal.TermReader
+	tr            *terminal.Terminal
 	tw            *terminal.TermWriter
 }
 
@@ -75,7 +75,7 @@ func (s *Shell) Run() error {
 	s.tr = terminal.NewTermReader(s.Stdin, s.tw)
 	s.tr.CharacterReadHook = s.characterReadHook
 	s.Stdout = s.tw
-	s.Stderr = s.tw
+	s.Stderr = &terminalErrWriter{s.tw}
 
 	if s.CommandRegistry == nil {
 		registry, err := cmd.LoadFromPathEnv(s.Env.Get("PATH"), s.FS, s.FullPathFunc, s.buildPathCommandFunc)
@@ -101,8 +101,10 @@ func (s *Shell) Run() error {
 			s.tw.Write([]byte{0x07})
 		},
 		PossibleCompletions: func(p []string) {
-			fmt.Fprintf(s.Stdout, "\n%s\n", strings.Join(p, "  "))
-			fmt.Fprintf(s.Stdout, "$ %s", s.tr.Line())
+			s.tw.StagePushForegroundColor(terminal.Cyan)
+			s.tw.Stagef("\n%s\n", strings.Join(p, "  "))
+			s.tw.StagePopForegroundColor()
+			s.tr.Ready()
 		},
 	}
 
@@ -140,17 +142,21 @@ func (s *Shell) Run() error {
 
 func (s *Shell) repl() {
 	for {
-		fmt.Fprint(s.Stdout, "$ ")
+		s.tr.Ready()
 
 		input, err := s.read()
 		if err != nil {
 			if errors.Is(err, ErrExit) {
 				return
 			}
-			_, _ = fmt.Fprintf(s.Stdout, "error reading input: %s\n", err)
+			fmt.Fprintf(s.Stdout, "error reading input: %s\n", err)
 			return
 		}
-		input = strings.TrimPrefix(input, "$ ")
+
+		input = strings.TrimSpace(input)
+		if len(input) == 0 {
+			continue
+		}
 
 		s.HistoryContext.Add(input)
 
@@ -160,9 +166,9 @@ func (s *Shell) repl() {
 			}
 
 			if errors.Is(err, interpreter.ErrCommandNotFound) {
-				_, _ = fmt.Fprintln(s.Stdout, err)
+				fmt.Fprintln(s.Stderr, err)
 			} else {
-				_, _ = fmt.Fprintf(s.Stdout, "error: %s\n", err)
+				fmt.Fprintf(s.Stderr, "error: %s\n", err)
 			}
 			continue
 		}
@@ -177,11 +183,11 @@ func (s *Shell) read() (string, error) {
 		switch item := s.tr.NextItem(); item.Type {
 		case terminal.ItemKeyUp:
 			if item, ok := histNavCtx.Back(); ok {
-				s.tr.ReplaceWith("$ " + item)
+				s.tr.ReplaceWith(item)
 			}
 		case terminal.ItemKeyDown:
 			if item, ok := histNavCtx.Forward(); ok {
-				s.tr.ReplaceWith("$ " + item)
+				s.tr.ReplaceWith(item)
 			}
 		case terminal.ItemKeyCtrlC:
 			return "", ErrExit
@@ -190,14 +196,10 @@ func (s *Shell) read() (string, error) {
 		case terminal.ItemKeyTab:
 			line, ok := s.autocompleter.Complete(s.tr.Line())
 			if ok {
-				s.tr.ReplaceWith("$ " + line)
+				s.tr.ReplaceWith(line)
 			}
 		case terminal.ItemKeyCtrlL:
-			line := s.tr.Line()
-			s.tw.Stage([]byte{0x1b, '[', '2', 'J'}) // clear terminal
-			s.tw.Stage([]byte{'\r'})                // return cursor to start
-			s.tw.Stage([]byte("$ " + line))
-			s.tw.Commit()
+			s.tr.ClearScreen()
 		default:
 			fmt.Println("default")
 		}
@@ -236,4 +238,26 @@ func (s *Shell) LookupCommand(name string) (f interpreter.CmdFunc, found bool, e
 		cmd.Stderr = stderr
 		return cmd.Run(cmd, args)
 	}, true, nil
+}
+
+type terminalErrWriter struct {
+	tw *terminal.TermWriter
+}
+
+func (t *terminalErrWriter) Write(b []byte) (int, error) {
+	t.tw.StagePushForegroundColor(terminal.Red)
+	t.tw.Stage(b)
+	t.tw.StagePopForegroundColor()
+	n, err := t.tw.Commit()
+	if err != nil {
+		n = min(n, len(b))
+		return n, err
+	}
+
+	if n < len(b) {
+		return n, io.ErrShortWrite
+	}
+
+	n = min(n, len(b))
+	return n, err
 }

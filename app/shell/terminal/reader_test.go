@@ -16,12 +16,12 @@ func TestNextToken(t *testing.T) {
 	}{
 		{
 			"simple with linefeed",
-			imp("echo mino", keyEnter),
+			imp("echo mino", keyCarriageReturn),
 			[]Item{{ItemLineInput, "echo mino"}},
 		},
 		{
 			"left right keys then simple input",
-			imp(keyEscape, "[D", keyEscape, "[C", "echo mino", keyEnter),
+			imp(keyEscape, "[D", keyEscape, "[C", "echo mino", keyCarriageReturn),
 			[]Item{{ItemLineInput, "[D[Cecho mino"}},
 		},
 	}

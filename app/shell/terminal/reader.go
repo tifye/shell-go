@@ -14,39 +14,38 @@ import (
 // ANSI escape sequences
 // https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797
 const (
-	keyCtrlC     = 3 // ^C
-	keyCtrlD     = 4
-	keyCtrlU     = 21
-	keyBackspace = 8
-	keyDelete    = 127
-	keyEnter     = '\r'
-	keyLF        = '\n'
-	keyTab       = '\t'
+	keyCtrlC          = 3 // ^C
+	keyCtrlD          = 4
+	keyCtrlU          = 21
+	keyBackspace      = 8
+	keyDelete         = 127
+	keyCarriageReturn = '\r'
+	keyLineFeed       = '\n'
+	keyTab            = '\t'
 
 	keyEscape byte = 0x1B // 27
 	// Control Sequence Introducer
 	csi byte = 0x5B // '['
-
-	keyUnknown = 0xd800 /* UTF-16 surrogate area */ + iota
-	keyUp
-	keyDown
-	keyLeft
-	keyRight
-	keyAltLeft
-	keyAltRight
-	keyHome
-	keyEnd
-	keyDeleteWord
-	keyDeleteLine
-	keyClearScreen
-	keyPasteStart
-	keyPasteEnd
 )
 
 var (
-	crlf       = []byte{'\r', '\n'}
+	newLine = []byte{'\r', '\n'}
+
+	// clears line starting from cursor position to end of line
+	clearLine   = []byte{keyEscape, csi, 'K'}
+	clearScreen = []byte{keyEscape, '[', '2', 'J'}
+
 	pasteStart = []byte{keyEscape, '[', '2', '0', '0', '~'}
 	pasteEnd   = []byte{keyEscape, '[', '2', '0', '1', '~'}
+
+	resetColor = []byte{keyEscape, '[', '0', 'm'}
+	Purple     = []byte{keyEscape, '[', '3', '8', ';', '5', ';', '1', '4', '1', 'm'}
+	Grey       = []byte{keyEscape, '[', '9', '0', 'm'}
+	Cyan       = []byte{keyEscape, '[', '3', '6', 'm'}
+	PastelRed  = []byte("\x1b[38;2;255;140;140m") // soft pink-red
+	Salmon     = []byte("\x1b[38;2;255;160;122m") // salmon / coral-ish
+	Rose       = []byte("\x1b[38;2;255;120;170m") // rosy magenta-red
+	Red        = []byte{0x1b, '[', '3', '1', 'm'}
 )
 
 type ItemType int
@@ -69,12 +68,14 @@ type Item struct {
 	Literal string
 }
 
-type stateFunc func(*TermReader) stateFunc
+type stateFunc func(*Terminal) stateFunc
 
-type TermReader struct {
-	r  io.Reader
-	tw *TermWriter
+type Terminal struct {
+	r      io.Reader
+	tw     *TermWriter
+	prompt string
 
+	// line is the current user input
 	line []rune
 	item Item
 	view []byte
@@ -83,19 +84,20 @@ type TermReader struct {
 	CharacterReadHook func(r rune)
 }
 
-func NewTermReader(r io.Reader, tw *TermWriter) *TermReader {
-	return &TermReader{
-		r:  r,
-		tw: tw,
+func NewTermReader(r io.Reader, tw *TermWriter) *Terminal {
+	return &Terminal{
+		prompt: "$ ",
+		r:      r,
+		tw:     tw,
 	}
 }
 
-func (t *TermReader) Line() string {
+func (t *Terminal) Line() string {
 	// naughty naughty
-	return strings.TrimPrefix(string(t.line), "$ ")
+	return strings.TrimPrefix(string(t.line), string(t.prompt)+" ")
 }
 
-func (t *TermReader) NextItem() Item {
+func (t *Terminal) NextItem() Item {
 	t.item = Item{
 		Type:    ItemEOF,
 		Literal: "EOF",
@@ -110,25 +112,43 @@ func (t *TermReader) NextItem() Item {
 	}
 }
 
-func (t *TermReader) ReplaceWith(input string) error {
+func (t *Terminal) ReplaceWith(input string) error {
 	t.line = []rune(input)
-	t.tw.WriteByte('\r')
-	t.tw.Write([]byte{keyEscape, csi, 'K'})
-	t.tw.WriteString(input)
+	t.tw.StageByte(keyCarriageReturn)
+	t.tw.StageString(t.prompt)
+	t.tw.Stage(clearLine)
+	t.tw.StageString(input)
+	t.tw.Commit()
 	return nil
 }
 
-func (t *TermReader) Suggest(s string) error {
-	t.tw.Stage([]byte{keyEscape, '[', '0', 'K'})
-	t.tw.StagePushForegroundColor(grey)
-	t.tw.Stage([]byte(s))
+func (t *Terminal) Suggest(s string) error {
+	t.tw.Stage(clearLine)
+	t.tw.StagePushForegroundColor(Grey)
+	t.tw.StageString(s)
 	t.tw.StageMove(-len(s))
 	t.tw.StagePopForegroundColor()
 	_, err := t.tw.Commit()
 	return err
 }
 
-func (t *TermReader) eraseLastKey() {
+func (t *Terminal) Ready() error {
+	t.tw.StageByte(keyCarriageReturn)
+	t.tw.StageString(t.prompt)
+	if len(t.line) > 0 {
+		t.tw.StageString(t.Line())
+	}
+	_, err := t.tw.Commit()
+	return err
+}
+
+func (t *Terminal) ClearScreen() error {
+	t.tw.Stage(clearScreen)
+	t.tw.StageByte(keyCarriageReturn)
+	return t.Ready()
+}
+
+func (t *Terminal) eraseLastKey() {
 	if len(t.line) == 0 {
 		return
 	}
@@ -139,7 +159,7 @@ func (t *TermReader) eraseLastKey() {
 	t.tw.Commit()
 }
 
-func (t *TermReader) error(e error) stateFunc {
+func (t *Terminal) error(e error) stateFunc {
 	t.item = Item{
 		Type:    ItemError,
 		Literal: e.Error(),
@@ -147,32 +167,32 @@ func (t *TermReader) error(e error) stateFunc {
 	return nil
 }
 
-func (t *TermReader) emitItem(item Item) stateFunc {
+func (t *Terminal) emitItem(item Item) stateFunc {
 	t.item = item
 	return nil
 }
 
-func (t *TermReader) emit(typ ItemType, literal string) stateFunc {
+func (t *Terminal) emit(typ ItemType, literal string) stateFunc {
 	return t.emitItem(Item{
 		Type:    typ,
 		Literal: literal,
 	})
 }
 
-func (t *TermReader) advanceView(n int) {
+func (t *Terminal) advanceView(n int) {
 	assert.Assert(n >= 0)
 	assert.Assert(n <= len(t.view))
 	t.view = t.view[n:]
 }
 
-func (t *TermReader) isViewCurrent(r byte) bool {
+func (t *Terminal) isViewCurrent(r byte) bool {
 	if len(t.view) == 0 {
 		return false
 	}
 	return t.view[0] == r
 }
 
-func advance(t *TermReader) stateFunc {
+func advance(t *Terminal) stateFunc {
 	if len(t.view) > 0 {
 		// moves view to front of bof
 		// effectively removing the already read parts
@@ -192,11 +212,11 @@ func advance(t *TermReader) stateFunc {
 	return readInput
 }
 
-func readInput(t *TermReader) stateFunc {
+func readInput(t *Terminal) stateFunc {
 	return readKey
 }
 
-func readKey(t *TermReader) stateFunc {
+func readKey(t *Terminal) stateFunc {
 	if len(t.view) == 0 {
 		return advance
 	}
@@ -248,11 +268,11 @@ func readKey(t *TermReader) stateFunc {
 	return handleKey
 }
 
-func readPaste(t *TermReader) stateFunc {
+func readPaste(t *Terminal) stateFunc {
 	return nil
 }
 
-func handleKey(t *TermReader) stateFunc {
+func handleKey(t *Terminal) stateFunc {
 	if !utf8.FullRune(t.view) {
 		return advance
 	}
@@ -263,7 +283,7 @@ func handleKey(t *TermReader) stateFunc {
 	switch key {
 	case keyTab:
 		return t.emit(ItemKeyTab, string(key))
-	case keyEnter, keyLF:
+	case keyCarriageReturn, keyLineFeed:
 		return handleEnterKey
 	case keyBackspace, keyDelete:
 		t.eraseLastKey()
@@ -276,18 +296,18 @@ func handleKey(t *TermReader) stateFunc {
 	}
 }
 
-func handleEnterKey(t *TermReader) stateFunc {
-	if t.isViewCurrent(keyLF) {
+func handleEnterKey(t *Terminal) stateFunc {
+	if t.isViewCurrent(keyLineFeed) {
 		t.advanceView(1)
 	}
 	line := string(t.line)
 	t.line = t.line[:0]
-	t.tw.Stage(crlf)
+	t.tw.Stage(newLine)
 	t.tw.Commit()
 	return t.emit(ItemLineInput, line)
 }
 
-func (t *TermReader) addToLine(r rune) stateFunc {
+func (t *Terminal) addToLine(r rune) stateFunc {
 	t.line = append(t.line, r)
 	t.tw.StageRune(r)
 	t.tw.Commit()

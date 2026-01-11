@@ -2,6 +2,7 @@ package terminal
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"strconv"
 	"unicode/utf8"
@@ -19,7 +20,7 @@ func NewTermWriter(w io.Writer) *TermWriter {
 		w:            w,
 		fgColorStack: newColorStack(),
 	}
-	t.StagePushForegroundColor(purple)
+	t.StagePushForegroundColor(Purple)
 	return t
 }
 
@@ -53,6 +54,10 @@ func (t *TermWriter) WriteByte(b byte) error {
 	return err
 }
 
+func (t *TermWriter) Stagef(format string, a ...any) {
+	t.Stage(fmt.Appendf([]byte{}, format, a...))
+}
+
 func (t *TermWriter) Stage(p []byte) {
 	// need to replace all \n with \r\n
 	// \r is carriage return which places the
@@ -67,8 +72,12 @@ func (t *TermWriter) Stage(p []byte) {
 		t.buf = append(t.buf, p[:idx]...)
 		p = p[idx+1:]
 
-		t.buf = append(t.buf, crlf...)
+		t.buf = append(t.buf, newLine...)
 	}
+}
+
+func (t *TermWriter) StageString(s string) {
+	t.Stage([]byte(s))
 }
 
 func (t *TermWriter) StageRune(r rune) {
@@ -76,6 +85,10 @@ func (t *TermWriter) StageRune(r rune) {
 	n := utf8.EncodeRune(b, r)
 	b = b[:n]
 	t.Stage(b)
+}
+
+func (t *TermWriter) StageByte(b byte) {
+	t.Stage([]byte{b})
 }
 
 func (t *TermWriter) Commit() (int, error) {
@@ -121,16 +134,3 @@ func (t *TermWriter) StagePopForegroundColor() {
 	c := t.fgColorStack.Top()
 	t.Stage(c)
 }
-
-var (
-	red     = []byte{keyEscape, '[', '3', '1', 'm'}
-	green   = []byte{keyEscape, '[', '3', '2', 'm'}
-	yello   = []byte{keyEscape, '[', '3', '3', 'm'}
-	blue    = []byte{keyEscape, '[', '3', '4', 'm'}
-	magenta = []byte{keyEscape, '[', '3', '5', 'm'}
-	cyan    = []byte{keyEscape, '[', '3', '6', 'm'}
-	purple  = []byte{keyEscape, '[', '3', '8', ';', '5', ';', '1', '4', '1', 'm'}
-
-	grey       = []byte{keyEscape, '[', '9', '0', 'm'}
-	resetColor = []byte{keyEscape, '[', '0', 'm'}
-)
