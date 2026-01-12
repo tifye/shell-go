@@ -160,6 +160,7 @@ func (s *Shell) repl() {
 
 		s.HistoryContext.Add(input)
 
+		s.tw.StagePushForegroundColor(terminal.OffWhiteWarm)
 		if err = s.interp.Evaluate(input); err != nil {
 			if errors.Is(err, ErrExit) {
 				return
@@ -170,8 +171,8 @@ func (s *Shell) repl() {
 			} else {
 				fmt.Fprintf(s.Stderr, "error: %s\n", err)
 			}
-			continue
 		}
+		s.tw.StagePopForegroundColor()
 	}
 }
 

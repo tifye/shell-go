@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"strings"
 	"unicode/utf8"
 
 	"github.com/codecrafters-io/shell-starter-go/assert"
@@ -38,14 +37,17 @@ var (
 	pasteStart = []byte{keyEscape, '[', '2', '0', '0', '~'}
 	pasteEnd   = []byte{keyEscape, '[', '2', '0', '1', '~'}
 
-	resetColor = []byte{keyEscape, '[', '0', 'm'}
-	Purple     = []byte{keyEscape, '[', '3', '8', ';', '5', ';', '1', '4', '1', 'm'}
-	Grey       = []byte{keyEscape, '[', '9', '0', 'm'}
-	Cyan       = []byte{keyEscape, '[', '3', '6', 'm'}
-	PastelRed  = []byte("\x1b[38;2;255;140;140m") // soft pink-red
-	Salmon     = []byte("\x1b[38;2;255;160;122m") // salmon / coral-ish
-	Rose       = []byte("\x1b[38;2;255;120;170m") // rosy magenta-red
-	Red        = []byte{0x1b, '[', '3', '1', 'm'}
+	resetColor   = []byte{keyEscape, '[', '0', 'm'}
+	Purple       = []byte{keyEscape, '[', '3', '8', ';', '5', ';', '1', '4', '1', 'm'}
+	Grey         = []byte{keyEscape, '[', '9', '0', 'm'}
+	Cyan         = []byte{keyEscape, '[', '3', '6', 'm'}
+	PastelRed    = []byte("\x1b[38;2;255;140;140m") // soft pink-red
+	Salmon       = []byte("\x1b[38;2;255;160;122m") // salmon / coral-ish
+	Rose         = []byte("\x1b[38;2;255;120;170m") // rosy magenta-red
+	Red          = []byte{0x1b, '[', '3', '1', 'm'}
+	OffWhiteWarm = []byte("\x1b[38;2;245;244;240m") // warm paper
+	OffWhiteCool = []byte("\x1b[38;2;236;239;244m") // cool soft gray
+	Ivory        = []byte("\x1b[38;2;255;252;240m") // ivory (very light)
 )
 
 type ItemType int
@@ -94,7 +96,8 @@ func NewTermReader(r io.Reader, tw *TermWriter) *Terminal {
 
 func (t *Terminal) Line() string {
 	// naughty naughty
-	return strings.TrimPrefix(string(t.line), string(t.prompt)+" ")
+	// return strings.TrimPrefix(string(t.line), string(t.prompt)+" ")
+	return string(t.line)
 }
 
 func (t *Terminal) NextItem() Item {
