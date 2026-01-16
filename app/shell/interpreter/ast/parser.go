@@ -95,7 +95,6 @@ func (p *Parser) parseStatements() []Statement {
 			pipe := p.parsePipline(cmd)
 			if p.isCurToken(tokenAmpersand) {
 				stmts = append(stmts, p.parseBackground(pipe))
-				p.nextToken()
 			} else {
 				stmts = append(stmts, pipe)
 			}
@@ -103,8 +102,9 @@ func (p *Parser) parseStatements() []Statement {
 			stmts = append(stmts, p.parseBackground(cmd))
 		default:
 			stmts = append(stmts, cmd)
-			p.nextToken()
 		}
+
+		p.nextToken()
 	}
 
 	return stmts

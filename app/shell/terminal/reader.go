@@ -95,8 +95,6 @@ func NewTermReader(r io.Reader, tw *TermWriter) *Terminal {
 }
 
 func (t *Terminal) Line() string {
-	// naughty naughty
-	// return strings.TrimPrefix(string(t.line), string(t.prompt)+" ")
 	return string(t.line)
 }
 

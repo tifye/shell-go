@@ -54,3 +54,17 @@ func TestBackground(t *testing.T) {
 
 	assert.True(t, called)
 }
+
+func TestPipeEndWithSemicolon(t *testing.T) {
+	input := `echo mino | more;`
+	prog, err := Parse(input)
+	assert.NoError(t, err)
+	assert.Len(t, prog.Cmds, 1)
+}
+
+func TestCommandEnd(t *testing.T) {
+	input := `echo mino &`
+	prog, err := Parse(input)
+	assert.NoError(t, err)
+	assert.Len(t, prog.Cmds, 1)
+}
