@@ -113,9 +113,9 @@ func (l *lexer) backup() {
 	}
 }
 
-func (l *lexer) discard() {
-	l.start = l.pos
-}
+// func (l *lexer) discard() {
+// 	l.start = l.pos
+// }
 
 func (l *lexer) accept(valid string) bool {
 	if strings.ContainsRune(valid, l.next()) {
@@ -139,13 +139,13 @@ func (l *lexer) errorf(format string, args ...interface{}) stateFunc {
 	return nil
 }
 
-func (l *lexer) skipWhitespace() {
-	for r := l.next(); isSpace(r); {
-		r = l.next()
-	}
-	l.backup()
-	l.discard()
-}
+// func (l *lexer) skipWhitespace() {
+// 	for r := l.next(); isSpace(r); {
+// 		r = l.next()
+// 	}
+// 	l.backup()
+// 	l.discard()
+// }
 
 func (l *lexer) emitText() {
 	if l.pos > l.start {

@@ -13,9 +13,9 @@ import (
 // ANSI escape sequences
 // https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797
 const (
-	keyCtrlC          = 3 // ^C
-	keyCtrlD          = 4
-	keyCtrlU          = 21
+	keyCtrlC = 3 // ^C
+	// keyCtrlD          = 4
+	// keyCtrlU          = 21
 	keyBackspace      = 8
 	keyDelete         = 127
 	keyCarriageReturn = '\r'
@@ -35,7 +35,7 @@ var (
 	clearScreen = []byte{keyEscape, '[', '2', 'J'}
 
 	pasteStart = []byte{keyEscape, '[', '2', '0', '0', '~'}
-	pasteEnd   = []byte{keyEscape, '[', '2', '0', '1', '~'}
+	// pasteEnd   = []byte{keyEscape, '[', '2', '0', '1', '~'}
 
 	resetColor   = []byte{keyEscape, '[', '0', 'm'}
 	Purple       = []byte{keyEscape, '[', '3', '8', ';', '5', ';', '1', '4', '1', 'm'}
