@@ -2,6 +2,8 @@ package shell
 
 import "github.com/codecrafters-io/shell-starter-go/app/shell/terminal"
 
+// todo: refactor to how go http package handles chains. This implementation
+// has a flaw in that its hard to add handlers for multple items
 type KeyHandler interface {
 	Handle(t terminal.Item)
 	Next(k KeyHandler)

@@ -42,6 +42,7 @@ func run() {
 	s.WithPlugins(
 		&plugin.CompletionHintsPlugin{},
 		&plugin.AutocompletePlugin{},
+		&plugin.NavHistoryPlugin{},
 	)
 
 	if err := s.Run(); err != nil {

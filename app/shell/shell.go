@@ -52,6 +52,7 @@ type Shell struct {
 
 	plugins     []ShellPlugin
 	keyHandlers *KeyHandlers
+	*hooks
 }
 
 func (s *Shell) buildPathCommandFunc(exec, path string) cmd.CommandFunc {
@@ -87,6 +88,7 @@ func (s *Shell) Run() error {
 	s.Stderr = &terminalErrWriter{s.tw}
 
 	s.keyHandlers = NewKeyHandlers()
+	s.hooks = newHooks()
 
 	if s.CommandRegistry == nil {
 		registry, err := cmd.LoadFromPathEnv(s.Env.Get("PATH"), s.FS, s.FullPathFunc, s.buildPathCommandFunc)
@@ -181,20 +183,13 @@ func (s *Shell) repl() {
 }
 
 func (s *Shell) read() (string, error) {
-	histNavCtx := history.NewHistoryContext(s.HistoryContext.History)
+	s.hooks.runPreReadHooks()
 
 	for {
 		item := s.tr.NextItem()
+		s.keyHandlers.Handle(item)
 
 		switch item.Type {
-		case terminal.ItemKeyUp:
-			if item, ok := histNavCtx.Back(); ok {
-				s.tr.ReplaceWith(item)
-			}
-		case terminal.ItemKeyDown:
-			if item, ok := histNavCtx.Forward(); ok {
-				s.tr.ReplaceWith(item)
-			}
 		case terminal.ItemKeyCtrlC:
 			return "", ErrExit
 		case terminal.ItemLineInput:
@@ -204,8 +199,6 @@ func (s *Shell) read() (string, error) {
 			s.tr.ClearScreen()
 		default:
 		}
-
-		s.keyHandlers.Handle(item)
 	}
 }
 
