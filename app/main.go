@@ -44,6 +44,7 @@ func run() {
 		&plugin.AutocompletePlugin{},
 		&plugin.NavHistoryPlugin{},
 		&plugin.ClearScreenPlugin{},
+		plugin.ControlCExitPlugin{},
 	)
 
 	if err := s.Run(); err != nil {

@@ -187,11 +187,11 @@ func (s *Shell) read() (string, error) {
 
 	for {
 		item := s.tr.NextItem()
-		s.keyHandlers.handle(item)
+		if err := s.keyHandlers.handle(item); err != nil {
+			return "", err
+		}
 
 		switch item.Type {
-		case terminal.ItemKeyCtrlC:
-			return "", ErrExit
 		case terminal.ItemLineInput:
 			return item.Literal, nil
 		}

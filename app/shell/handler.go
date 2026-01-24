@@ -24,10 +24,10 @@ func (e *KeyHandlers) Use(typ terminal.ItemType, h KeyMiddlewareFunc) {
 	e.handlers[typ] = append(e.handlers[typ], h)
 }
 
-func (e *KeyHandlers) handle(item terminal.Item) {
+func (e *KeyHandlers) handle(item terminal.Item) error {
 	funcs, ok := e.handlers[item.Type]
 	if !ok {
-		return
+		return nil
 	}
 
 	handler := defaultHandler
@@ -35,5 +35,5 @@ func (e *KeyHandlers) handle(item terminal.Item) {
 		handler = middlewareFunc(handler)
 	}
 
-	handler(item)
+	return handler(item)
 }
