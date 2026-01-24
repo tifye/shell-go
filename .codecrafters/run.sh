@@ -7,5 +7,5 @@
 # Learn more: https://codecrafters.io/program-interface
 
 set -e # Exit on failure
-
+export ENV=CODECRAFTERS
 exec /tmp/codecrafters-build-shell-go "$@"
