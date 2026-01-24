@@ -104,6 +104,7 @@ func (s *Shell) Run() error {
 		registry.AddBuiltinCommand("pwd", NewPWDCommandFunc(s))
 		registry.AddBuiltinCommand("cd", NewCDCommandFunc(s))
 		registry.AddBuiltinCommand("clear", NewClearCommandFunc())
+		registry.AddBuiltinCommand("plugins", NewPluginsCommandFunc(s))
 
 		s.CommandRegistry = registry
 	}
@@ -138,8 +139,6 @@ func (s *Shell) Run() error {
 
 	for _, p := range s.plugins {
 		p.Register(s)
-		s.tw.Stagef("%s registered\n", p.Name()).
-			Commit()
 	}
 
 	s.repl()
