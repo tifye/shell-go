@@ -194,10 +194,6 @@ func (s *Shell) read() (string, error) {
 			return "", ErrExit
 		case terminal.ItemLineInput:
 			return item.Literal, nil
-		case terminal.ItemKeyTab:
-		case terminal.ItemKeyCtrlL:
-			s.tr.ClearScreen()
-		default:
 		}
 	}
 }

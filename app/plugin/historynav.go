@@ -7,6 +7,8 @@ import (
 	"golang.org/x/term"
 )
 
+var _ shell.ShellPlugin = (*NavHistoryPlugin)(nil)
+
 type NavHistoryPlugin struct {
 	historyCtx   *history.HistoryContext
 	shellHistory term.History
