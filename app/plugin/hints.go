@@ -1,4 +1,4 @@
-package main
+package plugin
 
 import (
 	"github.com/codecrafters-io/shell-starter-go/app/cmd"
@@ -14,7 +14,7 @@ type CompletionHintsPlugin struct {
 }
 
 func (a *CompletionHintsPlugin) Name() string {
-	return "Suggest completions"
+	return "Completion Hints"
 }
 
 func (a *CompletionHintsPlugin) Register(s *shell.Shell) {

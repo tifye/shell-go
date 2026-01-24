@@ -46,12 +46,12 @@ type Shell struct {
 	HistoryContext  *history.HistoryContext
 	CommandRegistry *cmd.Registry
 
-	interp        *interpreter.Interpreter
-	autocompleter *autocompleter
-	tr            *terminal.Terminal
-	tw            *terminal.TermWriter
+	interp *interpreter.Interpreter
+	tr     *terminal.Terminal
+	tw     *terminal.TermWriter
 
-	plugins []ShellPlugin
+	plugins     []ShellPlugin
+	keyHandlers *KeyHandlers
 }
 
 func (s *Shell) buildPathCommandFunc(exec, path string) cmd.CommandFunc {
@@ -72,6 +72,10 @@ func (s *Shell) Terminal() *terminal.Terminal {
 	return s.tr
 }
 
+func (s *Shell) KeyHandlers() *KeyHandlers {
+	return s.keyHandlers
+}
+
 func (s *Shell) Run() error {
 	assert.NotNil(s.Stdout)
 	assert.NotNil(s.Stderr)
@@ -81,6 +85,8 @@ func (s *Shell) Run() error {
 	s.tr = terminal.NewTermReader(s.Stdin, s.tw)
 	s.Stdout = s.tw
 	s.Stderr = &terminalErrWriter{s.tw}
+
+	s.keyHandlers = NewKeyHandlers()
 
 	if s.CommandRegistry == nil {
 		registry, err := cmd.LoadFromPathEnv(s.Env.Get("PATH"), s.FS, s.FullPathFunc, s.buildPathCommandFunc)
@@ -98,19 +104,6 @@ func (s *Shell) Run() error {
 		registry.AddBuiltinCommand("clear", NewClearCommandFunc())
 
 		s.CommandRegistry = registry
-	}
-
-	s.autocompleter = &autocompleter{
-		registry: s.CommandRegistry,
-		RingTheBell: func() {
-			s.tw.Write([]byte{0x07})
-		},
-		PossibleCompletions: func(p []string) {
-			s.tw.StagePushForegroundColor(terminal.Cyan)
-			s.tw.Stagef("\n%s\n", strings.Join(p, "  "))
-			s.tw.StagePopForegroundColor()
-			s.tr.Ready()
-		},
 	}
 
 	s.interp = interpreter.NewInterpreter(
@@ -188,11 +181,12 @@ func (s *Shell) repl() {
 }
 
 func (s *Shell) read() (string, error) {
-	// Not exactly optimal but works for now
 	histNavCtx := history.NewHistoryContext(s.HistoryContext.History)
 
 	for {
-		switch item := s.tr.NextItem(); item.Type {
+		item := s.tr.NextItem()
+
+		switch item.Type {
 		case terminal.ItemKeyUp:
 			if item, ok := histNavCtx.Back(); ok {
 				s.tr.ReplaceWith(item)
@@ -206,15 +200,12 @@ func (s *Shell) read() (string, error) {
 		case terminal.ItemLineInput:
 			return item.Literal, nil
 		case terminal.ItemKeyTab:
-			line, ok := s.autocompleter.Complete(s.tr.Line())
-			if ok {
-				s.tr.ReplaceWith(line)
-			}
 		case terminal.ItemKeyCtrlL:
 			s.tr.ClearScreen()
 		default:
-			fmt.Println("default")
 		}
+
+		s.keyHandlers.Handle(item)
 	}
 }
 

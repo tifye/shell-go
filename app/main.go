@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"syscall"
 
+	"github.com/codecrafters-io/shell-starter-go/app/plugin"
 	"github.com/codecrafters-io/shell-starter-go/app/shell"
 	"github.com/codecrafters-io/shell-starter-go/app/shell/history"
 	"golang.org/x/term"
@@ -39,7 +40,8 @@ func run() {
 	}
 
 	s.WithPlugins(
-		&CompletionHintsPlugin{},
+		&plugin.CompletionHintsPlugin{},
+		&plugin.AutocompletePlugin{},
 	)
 
 	if err := s.Run(); err != nil {
