@@ -37,6 +37,11 @@ func run() {
 		FullPathFunc:   filepath.Abs,
 		WorkingDir:     workingDir,
 	}
+
+	s.WithPlugins(
+		&CompletionHintsPlugin{},
+	)
+
 	if err := s.Run(); err != nil {
 		panic(err)
 	}

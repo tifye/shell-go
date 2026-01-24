@@ -50,6 +50,8 @@ type Shell struct {
 	autocompleter *autocompleter
 	tr            *terminal.Terminal
 	tw            *terminal.TermWriter
+
+	plugins []ShellPlugin
 }
 
 func (s *Shell) buildPathCommandFunc(exec, path string) cmd.CommandFunc {
@@ -66,6 +68,10 @@ func (s *Shell) buildPathCommandFunc(exec, path string) cmd.CommandFunc {
 	}
 }
 
+func (s *Shell) Terminal() *terminal.Terminal {
+	return s.tr
+}
+
 func (s *Shell) Run() error {
 	assert.NotNil(s.Stdout)
 	assert.NotNil(s.Stderr)
@@ -73,7 +79,6 @@ func (s *Shell) Run() error {
 
 	s.tw = terminal.NewTermWriter(s.Stdout)
 	s.tr = terminal.NewTermReader(s.Stdin, s.tw)
-	s.tr.CharacterReadHook = s.characterReadHook
 	s.Stdout = s.tw
 	s.Stderr = &terminalErrWriter{s.tw}
 
@@ -135,6 +140,12 @@ func (s *Shell) Run() error {
 			fmt.Fprintf(s.Stderr, "failed to save command history: %s\n", err)
 		}
 	}()
+
+	for _, p := range s.plugins {
+		p.Register(s)
+		s.tw.Stagef("%s registered\n", p.Name()).
+			Commit()
+	}
 
 	s.repl()
 	return nil
@@ -207,26 +218,6 @@ func (s *Shell) read() (string, error) {
 	}
 }
 
-func (s *Shell) suggestAutocomplete() {
-	line := s.tr.Line()
-	if line == "" {
-		return
-	}
-
-	match, ok := s.CommandRegistry.MatchFirst(line)
-	if !ok {
-		return
-	}
-
-	suggestion := match[len(line):]
-	s.tr.Suggest(suggestion)
-
-}
-
-func (s *Shell) characterReadHook(_ rune) {
-	s.suggestAutocomplete()
-}
-
 func (s *Shell) LookupCommand(name string) (f interpreter.CmdFunc, found bool, err error) {
 	cmd, found := s.CommandRegistry.LookupCommand(name)
 	if !found {
@@ -239,6 +230,18 @@ func (s *Shell) LookupCommand(name string) (f interpreter.CmdFunc, found bool, e
 		cmd.Stderr = stderr
 		return cmd.Run(cmd, args)
 	}, true, nil
+}
+
+type ShellPlugin interface {
+	Name() string
+	Register(*Shell)
+}
+
+func (s *Shell) WithPlugins(ps ...ShellPlugin) {
+	if s.plugins == nil {
+		s.plugins = make([]ShellPlugin, 0, len(ps))
+	}
+	s.plugins = append(s.plugins, ps...)
 }
 
 type terminalErrWriter struct {

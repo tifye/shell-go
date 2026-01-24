@@ -30,8 +30,8 @@ const (
 var (
 	newLine = []byte{'\r', '\n'}
 
-	// clears line starting from cursor position to end of line
-	clearLine   = []byte{keyEscape, csi, 'K'}
+	// ClearLine sequence clears line starting from cursor position to end of line
+	ClearLine   = []byte{keyEscape, csi, 'K'}
 	clearScreen = []byte{keyEscape, '[', '2', 'J'}
 
 	pasteStart = []byte{keyEscape, '[', '2', '0', '0', '~'}
@@ -94,6 +94,10 @@ func NewTermReader(r io.Reader, tw *TermWriter) *Terminal {
 	}
 }
 
+func (t *Terminal) Writer() *TermWriter {
+	return t.tw
+}
+
 func (t *Terminal) Line() string {
 	return string(t.line)
 }
@@ -117,20 +121,10 @@ func (t *Terminal) ReplaceWith(input string) error {
 	t.line = []rune(input)
 	t.tw.StageByte(keyCarriageReturn)
 	t.tw.StageString(t.prompt)
-	t.tw.Stage(clearLine)
+	t.tw.Stage(ClearLine)
 	t.tw.StageString(input)
 	t.tw.Commit()
 	return nil
-}
-
-func (t *Terminal) Suggest(s string) error {
-	t.tw.Stage(clearLine)
-	t.tw.StagePushForegroundColor(Grey)
-	t.tw.StageString(s)
-	t.tw.StageMove(-len(s))
-	t.tw.StagePopForegroundColor()
-	_, err := t.tw.Commit()
-	return err
 }
 
 func (t *Terminal) Ready() error {

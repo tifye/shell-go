@@ -54,11 +54,12 @@ func (t *TermWriter) WriteByte(b byte) error {
 	return err
 }
 
-func (t *TermWriter) Stagef(format string, a ...any) {
+func (t *TermWriter) Stagef(format string, a ...any) *TermWriter {
 	t.Stage(fmt.Appendf([]byte{}, format, a...))
+	return t
 }
 
-func (t *TermWriter) Stage(p []byte) {
+func (t *TermWriter) Stage(p []byte) *TermWriter {
 	// need to replace all \n with \r\n
 	// \r is carriage return which places the
 	// cursor back all the way to the left
@@ -66,7 +67,7 @@ func (t *TermWriter) Stage(p []byte) {
 		idx := bytes.IndexRune(p, '\n')
 		if idx < 0 {
 			t.buf = append(t.buf, p...)
-			return
+			return t
 		}
 
 		t.buf = append(t.buf, p[:idx]...)
@@ -74,21 +75,24 @@ func (t *TermWriter) Stage(p []byte) {
 
 		t.buf = append(t.buf, newLine...)
 	}
+
+	return t
 }
 
-func (t *TermWriter) StageString(s string) {
+func (t *TermWriter) StageString(s string) *TermWriter {
 	t.Stage([]byte(s))
+	return t
 }
 
-func (t *TermWriter) StageRune(r rune) {
+func (t *TermWriter) StageRune(r rune) *TermWriter {
 	b := make([]byte, 8)
 	n := utf8.EncodeRune(b, r)
 	b = b[:n]
-	t.Stage(b)
+	return t.Stage(b)
 }
 
-func (t *TermWriter) StageByte(b byte) {
-	t.Stage([]byte{b})
+func (t *TermWriter) StageByte(b byte) *TermWriter {
+	return t.Stage([]byte{b})
 }
 
 func (t *TermWriter) Commit() (int, error) {
@@ -102,9 +106,9 @@ func (t *TermWriter) Commit() (int, error) {
 	return n, nil
 }
 
-func (t *TermWriter) StageMove(deltaX int) {
+func (t *TermWriter) StageMove(deltaX int) *TermWriter {
 	if deltaX == 0 {
-		return
+		return t
 	}
 
 	var direction byte
@@ -121,16 +125,16 @@ func (t *TermWriter) StageMove(deltaX int) {
 	moveSeq := []byte{keyEscape, '['}
 	moveSeq = strconv.AppendInt(moveSeq, int64(distance), 10)
 	moveSeq = append(moveSeq, direction)
-	t.Stage(moveSeq)
+	return t.Stage(moveSeq)
 }
 
-func (t *TermWriter) StagePushForegroundColor(c []byte) {
+func (t *TermWriter) StagePushForegroundColor(c []byte) *TermWriter {
 	t.fgColorStack.Push(c)
-	t.Stage(c)
+	return t.Stage(c)
 }
 
-func (t *TermWriter) StagePopForegroundColor() {
+func (t *TermWriter) StagePopForegroundColor() *TermWriter {
 	t.fgColorStack.Pop()
 	c := t.fgColorStack.Top()
-	t.Stage(c)
+	return t.Stage(c)
 }
