@@ -11,6 +11,10 @@ type ClearScreenPlugin struct {
 	tr *terminal.Terminal
 }
 
+func NewClearScreenPlugin() *ClearScreenPlugin {
+	return &ClearScreenPlugin{}
+}
+
 func (*ClearScreenPlugin) Name() string {
 	return "Clear Screen"
 }

@@ -13,6 +13,10 @@ type CompletionHintsPlugin struct {
 	registry *cmd.Registry
 }
 
+func NewCompletionHintsPlugin() *CompletionHintsPlugin {
+	return &CompletionHintsPlugin{}
+}
+
 func (a *CompletionHintsPlugin) Name() string {
 	return "Completion Hints"
 }

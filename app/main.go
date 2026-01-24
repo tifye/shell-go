@@ -40,10 +40,10 @@ func run() {
 	}
 
 	s.WithPlugins(
-		&plugin.CompletionHintsPlugin{},
-		&plugin.AutocompletePlugin{},
-		&plugin.NavHistoryPlugin{},
-		&plugin.ClearScreenPlugin{},
+		plugin.NewCompletionHintsPlugin(),
+		plugin.NewAutoCompletePlugin(),
+		plugin.NewNavHistoryPlugin(),
+		plugin.NewClearScreenPlugin(),
 		plugin.ControlCExitPlugin{},
 	)
 

@@ -20,6 +20,10 @@ type AutocompletePlugin struct {
 	bellRung bool
 }
 
+func NewAutoCompletePlugin() *AutocompletePlugin {
+	return &AutocompletePlugin{}
+}
+
 func (a *AutocompletePlugin) Name() string {
 	return "Autocomplete"
 }

@@ -15,6 +15,10 @@ type NavHistoryPlugin struct {
 	tr           *terminal.Terminal
 }
 
+func NewNavHistoryPlugin() *NavHistoryPlugin {
+	return &NavHistoryPlugin{}
+}
+
 func (h *NavHistoryPlugin) Name() string {
 	return "Navigate History"
 }
