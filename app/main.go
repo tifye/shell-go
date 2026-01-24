@@ -40,12 +40,14 @@ func run() {
 	}
 
 	s.WithPlugins(
-		plugin.NewCompletionHintsPlugin(),
 		plugin.NewAutoCompletePlugin(),
 		plugin.NewNavHistoryPlugin(),
 		plugin.NewClearScreenPlugin(),
 		plugin.ControlCExitPlugin{},
 	)
+	if os.Getenv("ENV") != "CODECRAFTERS" {
+		s.WithPlugins(plugin.NewCompletionHintsPlugin())
+	}
 
 	if err := s.Run(); err != nil {
 		panic(err)
