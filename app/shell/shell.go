@@ -87,7 +87,7 @@ func (s *Shell) Run() error {
 	s.Stdout = s.tw
 	s.Stderr = &terminalErrWriter{s.tw}
 
-	s.keyHandlers = NewKeyHandlers()
+	s.keyHandlers = newEventHandlers()
 	s.hooks = newHooks()
 
 	if s.CommandRegistry == nil {
@@ -187,7 +187,7 @@ func (s *Shell) read() (string, error) {
 
 	for {
 		item := s.tr.NextItem()
-		s.keyHandlers.Handle(item)
+		s.keyHandlers.handle(item)
 
 		switch item.Type {
 		case terminal.ItemKeyCtrlC:

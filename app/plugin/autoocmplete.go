@@ -14,8 +14,6 @@ import (
 var _ shell.ShellPlugin = (*AutocompletePlugin)(nil)
 
 type AutocompletePlugin struct {
-	nextHandler shell.KeyHandler
-
 	tr       *terminal.Terminal
 	registry *cmd.Registry
 
@@ -29,22 +27,16 @@ func (a *AutocompletePlugin) Name() string {
 func (a *AutocompletePlugin) Register(s *shell.Shell) {
 	a.registry = s.CommandRegistry
 	a.tr = s.Terminal()
-	s.KeyHandlers().Use(terminal.ItemKeyTab, a)
+	s.KeyHandlers().Use(terminal.ItemKeyTab, a.handleItemKeyTab)
 }
 
-func (a *AutocompletePlugin) Handle(item terminal.Item) {
-	line, ok := a.complete(a.tr.Line())
-	if ok {
-		a.tr.ReplaceWith(line)
+func (a *AutocompletePlugin) handleItemKeyTab(next shell.KeyHandler) shell.KeyHandler {
+	return func(i terminal.Item) error {
+		if line, ok := a.complete(a.tr.Line()); ok {
+			a.tr.ReplaceWith(line)
+		}
+		return next(i)
 	}
-
-	if a.nextHandler != nil {
-		a.nextHandler.Handle(item)
-	}
-}
-
-func (a *AutocompletePlugin) Next(k shell.KeyHandler) {
-	a.nextHandler = k
 }
 
 func (a *AutocompletePlugin) complete(input string) (string, bool) {

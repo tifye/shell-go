@@ -2,35 +2,38 @@ package shell
 
 import "github.com/codecrafters-io/shell-starter-go/app/shell/terminal"
 
-// todo: refactor to how go http package handles chains. This implementation
-// has a flaw in that its hard to add handlers for multple items
-type KeyHandler interface {
-	Handle(t terminal.Item)
-	Next(k KeyHandler)
+var defaultHandler KeyHandler = func(_ terminal.Item) error {
+	return nil
 }
+
+type KeyHandler func(terminal.Item) error
+
+type KeyMiddlewareFunc func(next KeyHandler) KeyHandler
 
 type KeyHandlers struct {
-	handlers map[terminal.ItemType]KeyHandler
+	handlers map[terminal.ItemType][]KeyMiddlewareFunc
 }
 
-func NewKeyHandlers() *KeyHandlers {
+func newEventHandlers() *KeyHandlers {
 	return &KeyHandlers{
-		handlers: map[terminal.ItemType]KeyHandler{},
+		handlers: map[terminal.ItemType][]KeyMiddlewareFunc{},
 	}
 }
 
-func (k *KeyHandlers) Handle(t terminal.Item) {
-	handler, ok := k.handlers[t.Type]
-	if ok {
-		handler.Handle(t)
-	}
+func (e *KeyHandlers) Use(typ terminal.ItemType, h KeyMiddlewareFunc) {
+	e.handlers[typ] = append(e.handlers[typ], h)
 }
 
-func (k *KeyHandlers) Use(t terminal.ItemType, next KeyHandler) {
-	handler, ok := k.handlers[t]
+func (e *KeyHandlers) handle(item terminal.Item) {
+	funcs, ok := e.handlers[item.Type]
 	if !ok {
-		k.handlers[t] = next
-	} else {
-		handler.Next(next)
+		return
 	}
+
+	handler := defaultHandler
+	for _, middlewareFunc := range funcs {
+		handler = middlewareFunc(handler)
+	}
+
+	handler(item)
 }

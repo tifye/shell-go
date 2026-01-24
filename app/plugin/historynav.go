@@ -8,8 +8,6 @@ import (
 )
 
 type NavHistoryPlugin struct {
-	nextHandler shell.KeyHandler
-
 	historyCtx   *history.HistoryContext
 	shellHistory term.History
 	tr           *terminal.Terminal
@@ -21,32 +19,29 @@ func (h *NavHistoryPlugin) Name() string {
 
 func (h *NavHistoryPlugin) Register(s *shell.Shell) {
 	s.AddPreReadHook(h.onPreRead)
-	s.KeyHandlers().Use(terminal.ItemKeyUp, h)
-	s.KeyHandlers().Use(terminal.ItemKeyDown, h)
+	s.KeyHandlers().Use(terminal.ItemKeyUp, h.handleItemUp)
+	s.KeyHandlers().Use(terminal.ItemKeyDown, h.handleItemDown)
 
 	h.shellHistory = s.HistoryContext
 	h.tr = s.Terminal()
 }
 
-func (h *NavHistoryPlugin) Handle(item terminal.Item) {
-	switch item.Type {
-	case terminal.ItemKeyUp:
+func (h *NavHistoryPlugin) handleItemUp(next shell.KeyHandler) shell.KeyHandler {
+	return func(i terminal.Item) error {
 		if item, ok := h.historyCtx.Back(); ok {
 			h.tr.ReplaceWith(item)
 		}
-	case terminal.ItemKeyDown:
-		if item, ok := h.historyCtx.Forward(); ok {
-			h.tr.ReplaceWith(item)
-		}
-	}
-
-	if h.nextHandler != nil {
-		h.nextHandler.Handle(item)
+		return next(i)
 	}
 }
 
-func (h *NavHistoryPlugin) Next(k shell.KeyHandler) {
-	h.nextHandler = k
+func (h *NavHistoryPlugin) handleItemDown(next shell.KeyHandler) shell.KeyHandler {
+	return func(i terminal.Item) error {
+		if item, ok := h.historyCtx.Forward(); ok {
+			h.tr.ReplaceWith(item)
+		}
+		return next(i)
+	}
 }
 
 func (h *NavHistoryPlugin) onPreRead() {
