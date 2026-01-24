@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -38,6 +39,8 @@ func run() {
 		FullPathFunc:   filepath.Abs,
 		WorkingDir:     workingDir,
 	}
+
+	fmt.Println(os.Getenv("ENV"))
 
 	s.WithPlugins(
 		plugin.NewAutoCompletePlugin(),
