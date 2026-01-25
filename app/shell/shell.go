@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/codecrafters-io/shell-starter-go/app/cmd"
 	"github.com/codecrafters-io/shell-starter-go/app/shell/history"
@@ -84,6 +85,10 @@ func (s *Shell) Run() error {
 
 	s.tw = terminal.NewTermWriter(s.Stdout)
 	s.tr = terminal.NewTermReader(s.Stdin, s.tw)
+	s.tr.PromptStringFunc = func() string {
+		timestr := time.Now().Format("15:04:05")
+		return fmt.Sprintf("%s $ ", timestr)
+	}
 	s.Stdout = s.tw
 	s.Stderr = &terminalErrWriter{s.tw}
 

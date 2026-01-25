@@ -65,6 +65,10 @@ const (
 	ItemKeyUnknown
 )
 
+var (
+	defaultPromptFunc = func() string { return "$ " }
+)
+
 type Item struct {
 	Type    ItemType
 	Literal string
@@ -73,9 +77,8 @@ type Item struct {
 type stateFunc func(*Terminal) stateFunc
 
 type Terminal struct {
-	r      io.Reader
-	tw     *TermWriter
-	prompt string
+	r  io.Reader
+	tw *TermWriter
 
 	// line is the current user input
 	line []rune
@@ -84,13 +87,14 @@ type Terminal struct {
 	buf  [256]byte
 
 	CharacterReadHook func(r rune)
+	PromptStringFunc  func() string
 }
 
 func NewTermReader(r io.Reader, tw *TermWriter) *Terminal {
 	return &Terminal{
-		prompt: "$ ",
-		r:      r,
-		tw:     tw,
+		PromptStringFunc: defaultPromptFunc,
+		r:                r,
+		tw:               tw,
 	}
 }
 
@@ -117,10 +121,18 @@ func (t *Terminal) NextItem() Item {
 	}
 }
 
+func (t *Terminal) prompt() string {
+	if t.PromptStringFunc != nil {
+		return t.PromptStringFunc()
+	}
+
+	return defaultPromptFunc()
+}
+
 func (t *Terminal) ReplaceWith(input string) error {
 	t.line = []rune(input)
 	t.tw.StageByte(keyCarriageReturn)
-	t.tw.StageString(t.prompt)
+	t.tw.StageString(t.prompt())
 	t.tw.Stage(ClearLine)
 	t.tw.StageString(input)
 	t.tw.Commit()
@@ -129,7 +141,7 @@ func (t *Terminal) ReplaceWith(input string) error {
 
 func (t *Terminal) Ready() error {
 	t.tw.StageByte(keyCarriageReturn)
-	t.tw.StageString(t.prompt)
+	t.tw.StageString(t.prompt())
 	if len(t.line) > 0 {
 		t.tw.StageString(t.Line())
 	}

@@ -193,6 +193,10 @@ func TestInterpretSingleCommands(t *testing.T) {
 			input:        `echo $HOME "Welcome ${HOME}."`,
 			expectedArgs: []string{`echo`, `<HOME>`, `Welcome <HOME>.`},
 		},
+		{
+			input:        `cat /tmp/owl/"meep mino"`,
+			expectedArgs: []string{`cat`, `/tmp/owl/meep mino`},
+		},
 	}
 
 	for _, test := range tt {

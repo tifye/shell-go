@@ -123,10 +123,10 @@ func (p *Interpreter) evalSequential(stmts []ast.Statement) error {
 	return nil
 }
 
-func (p *Interpreter) evalBackground(bg *ast.BackgroundStmt) error {
-	panic("evaluation of background commands is not yet supported")
-	return nil
-}
+// func (p *Interpreter) evalBackground(bg *ast.BackgroundStmt) error {
+// 	panic("evaluation of background commands is not yet supported")
+// 	return nil
+// }
 
 // evalPipeline evaluates a pipline statement optionally overriding the output
 // passed in out if no-nil.
