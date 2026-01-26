@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/codecrafters-io/shell-starter-go/app/shell"
+	"github.com/codecrafters-io/shell-starter-go/app/shell/terminal"
 	lua "github.com/yuin/gopher-lua"
 )
 
@@ -14,7 +15,8 @@ type LuaPlugin struct {
 	filename string
 	lstate   *lua.LState
 
-	s *shell.Shell
+	s  *shell.Shell
+	tw *terminal.TermWriter
 }
 
 func NewLuaPlugin(name, filename string) *LuaPlugin {
@@ -34,8 +36,10 @@ func (l *LuaPlugin) Name() string {
 
 func (l *LuaPlugin) Register(s *shell.Shell) {
 	l.s = s
+	l.tw = s.Terminal().Writer()
 
-	l.lstate.PreloadModule("shellplugin", l.loader)
+	l.lstate.PreloadModule("shell", l.shellLoader)
+	l.lstate.PreloadModule("shellplugin", l.shellPluginLoader)
 
 	if err := l.lstate.DoFile(l.filename); err != nil {
 		fmt.Println(err)
@@ -46,7 +50,7 @@ func (l *LuaPlugin) Register(s *shell.Shell) {
 	})
 }
 
-func (l *LuaPlugin) loader(lstate *lua.LState) int {
+func (l *LuaPlugin) shellPluginLoader(lstate *lua.LState) int {
 	exports := map[string]lua.LGFunction{
 		"SetPromptStringFunc": l.SetPromptStringFunc,
 		"AddHook":             l.AddHook,
@@ -95,5 +99,36 @@ func (l *LuaPlugin) SetPromptStringFunc(lstate *lua.LState) int {
 		defer lstate.Pop(1)
 		return lua.LVAsString(val)
 	}
+	return 0
+}
+
+func (l *LuaPlugin) shellLoader(lstate *lua.LState) int {
+	exports := map[string]lua.LGFunction{
+		"StagePushForegroundColor": l.StagePushForegroundColor,
+		"StagePopForegroundColor":  l.StagePopForegroundColor,
+		"StageString":              l.StageString,
+	}
+
+	mod := lstate.SetFuncs(lstate.NewTable(), exports)
+
+	lstate.Push(mod)
+	return 1
+}
+
+func (l *LuaPlugin) StagePushForegroundColor(lstate *lua.LState) int {
+	lcolor := lstate.ToString(1)
+	color := []byte(lcolor)
+	l.tw.StagePushForegroundColor(color)
+	return 0
+}
+
+func (l *LuaPlugin) StagePopForegroundColor(lstate *lua.LState) int {
+	l.tw.StagePopForegroundColor()
+	return 0
+}
+
+func (l *LuaPlugin) StageString(lstate *lua.LState) int {
+	lstr := lstate.ToString(1)
+	l.tw.StageString(lstr)
 	return 0
 }
