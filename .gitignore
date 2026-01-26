@@ -1,3 +1,4 @@
 history.txt
 /build
 .env
+.plugins/

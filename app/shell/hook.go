@@ -2,15 +2,14 @@ package shell
 
 import "github.com/codecrafters-io/shell-starter-go/assert"
 
-//go:generate stringer -type Hook -trimprefix Hook
-type Hook int
+type Hook string
 
 const (
-	HookPreRead Hook = iota
-	HookPreExit
+	HookPreRead Hook = "PreRead"
+	HookPreExit Hook = "PreExit"
 	// HookInitialized runs after the shell is initialized but before
 	// it begins its Read Print Eval loop
-	HookInitialized
+	HookInitialized Hook = "Initialized"
 )
 
 type HookFunc func()

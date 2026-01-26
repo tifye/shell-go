@@ -7,23 +7,23 @@ import (
 	"golang.org/x/term"
 )
 
-var _ shell.ShellPlugin = (*NavHistoryPlugin)(nil)
+var _ shell.ShellPlugin = (*NavHistory)(nil)
 
-type NavHistoryPlugin struct {
+type NavHistory struct {
 	historyCtx   *history.HistoryContext
 	shellHistory term.History
 	tr           *terminal.Terminal
 }
 
-func NewNavHistoryPlugin() *NavHistoryPlugin {
-	return &NavHistoryPlugin{}
+func NewNavHistory() *NavHistory {
+	return &NavHistory{}
 }
 
-func (h *NavHistoryPlugin) Name() string {
+func (h *NavHistory) Name() string {
 	return "Navigate History"
 }
 
-func (h *NavHistoryPlugin) Register(s *shell.Shell) {
+func (h *NavHistory) Register(s *shell.Shell) {
 	s.AddHook(shell.HookPreRead, h.onPreRead)
 	s.KeyHandlers().Use(terminal.ItemKeyUp, h.handleItemUp)
 	s.KeyHandlers().Use(terminal.ItemKeyDown, h.handleItemDown)
@@ -32,7 +32,7 @@ func (h *NavHistoryPlugin) Register(s *shell.Shell) {
 	h.tr = s.Terminal()
 }
 
-func (h *NavHistoryPlugin) handleItemUp(next shell.KeyHandler) shell.KeyHandler {
+func (h *NavHistory) handleItemUp(next shell.KeyHandler) shell.KeyHandler {
 	return func(i terminal.Item) error {
 		if item, ok := h.historyCtx.Back(); ok {
 			h.tr.ReplaceWith(item)
@@ -41,7 +41,7 @@ func (h *NavHistoryPlugin) handleItemUp(next shell.KeyHandler) shell.KeyHandler 
 	}
 }
 
-func (h *NavHistoryPlugin) handleItemDown(next shell.KeyHandler) shell.KeyHandler {
+func (h *NavHistory) handleItemDown(next shell.KeyHandler) shell.KeyHandler {
 	return func(i terminal.Item) error {
 		if item, ok := h.historyCtx.Forward(); ok {
 			h.tr.ReplaceWith(item)
@@ -50,6 +50,6 @@ func (h *NavHistoryPlugin) handleItemDown(next shell.KeyHandler) shell.KeyHandle
 	}
 }
 
-func (h *NavHistoryPlugin) onPreRead() {
+func (h *NavHistory) onPreRead() {
 	h.historyCtx = history.NewHistoryContext(h.shellHistory)
 }

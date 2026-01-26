@@ -6,29 +6,29 @@ import (
 	"github.com/codecrafters-io/shell-starter-go/app/shell/terminal"
 )
 
-var _ shell.ShellPlugin = (*CompletionHintsPlugin)(nil)
+var _ shell.ShellPlugin = (*CompletionHints)(nil)
 
-type CompletionHintsPlugin struct {
+type CompletionHints struct {
 	tr       *terminal.Terminal
 	registry *cmd.Registry
 }
 
-func NewCompletionHintsPlugin() *CompletionHintsPlugin {
-	return &CompletionHintsPlugin{}
+func NewCompletionHints() *CompletionHints {
+	return &CompletionHints{}
 }
 
-func (a *CompletionHintsPlugin) Name() string {
+func (a *CompletionHints) Name() string {
 	return "Completion Hints"
 }
 
-func (a *CompletionHintsPlugin) Register(s *shell.Shell) {
+func (a *CompletionHints) Register(s *shell.Shell) {
 	tr := s.Terminal()
 	a.tr = tr
 	a.registry = s.CommandRegistry
 	tr.CharacterReadHook = a.onCharacterRead
 }
 
-func (a *CompletionHintsPlugin) onCharacterRead(_ rune) {
+func (a *CompletionHints) onCharacterRead(_ rune) {
 	line := a.tr.Line()
 	if line == "" {
 		return

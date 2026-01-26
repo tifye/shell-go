@@ -5,13 +5,13 @@ import (
 	"github.com/codecrafters-io/shell-starter-go/app/shell/terminal"
 )
 
-type ControlCExitPlugin struct{}
+type ControlCExit struct{}
 
-func (ControlCExitPlugin) Name() string {
+func (ControlCExit) Name() string {
 	return "Control+C Exit"
 }
 
-func (ControlCExitPlugin) Register(s *shell.Shell) {
+func (ControlCExit) Register(s *shell.Shell) {
 	s.KeyHandlers().Use(terminal.ItemKeyCtrlC, onItemKeyCtrlC)
 }
 

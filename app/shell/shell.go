@@ -220,6 +220,13 @@ func (s *Shell) LookupCommand(name string) (f interpreter.CmdFunc, found bool, e
 	}, true, nil
 }
 
+func (s *Shell) Error(msg string) {
+	if s.Stderr == nil {
+		return
+	}
+	fmt.Fprint(s.Stderr, msg)
+}
+
 type ShellPlugin interface {
 	Name() string
 	Register(*Shell)
@@ -237,10 +244,11 @@ type terminalErrWriter struct {
 }
 
 func (t *terminalErrWriter) Write(b []byte) (int, error) {
-	t.tw.StagePushForegroundColor(terminal.Red)
-	t.tw.Stage(b)
-	t.tw.StagePopForegroundColor()
-	n, err := t.tw.Commit()
+	n, err := t.tw.
+		StagePushForegroundColor(terminal.Red).
+		Stage(b).
+		StagePopForegroundColor().
+		Commit()
 	if err != nil {
 		n = min(n, len(b))
 		return n, err

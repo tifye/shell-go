@@ -11,30 +11,30 @@ import (
 	"github.com/codecrafters-io/shell-starter-go/app/shell/terminal"
 )
 
-var _ shell.ShellPlugin = (*AutocompletePlugin)(nil)
+var _ shell.ShellPlugin = (*Autocomplete)(nil)
 
-type AutocompletePlugin struct {
+type Autocomplete struct {
 	tr       *terminal.Terminal
 	registry *cmd.Registry
 
 	bellRung bool
 }
 
-func NewAutoCompletePlugin() *AutocompletePlugin {
-	return &AutocompletePlugin{}
+func NewAutoComplete() *Autocomplete {
+	return &Autocomplete{}
 }
 
-func (a *AutocompletePlugin) Name() string {
+func (a *Autocomplete) Name() string {
 	return "Autocomplete"
 }
 
-func (a *AutocompletePlugin) Register(s *shell.Shell) {
+func (a *Autocomplete) Register(s *shell.Shell) {
 	a.registry = s.CommandRegistry
 	a.tr = s.Terminal()
 	s.KeyHandlers().Use(terminal.ItemKeyTab, a.handleItemKeyTab)
 }
 
-func (a *AutocompletePlugin) handleItemKeyTab(next shell.KeyHandler) shell.KeyHandler {
+func (a *Autocomplete) handleItemKeyTab(next shell.KeyHandler) shell.KeyHandler {
 	return func(i terminal.Item) error {
 		if line, ok := a.complete(a.tr.Line()); ok {
 			a.tr.ReplaceWith(line)
@@ -43,7 +43,7 @@ func (a *AutocompletePlugin) handleItemKeyTab(next shell.KeyHandler) shell.KeyHa
 	}
 }
 
-func (a *AutocompletePlugin) complete(input string) (string, bool) {
+func (a *Autocomplete) complete(input string) (string, bool) {
 	escaped := regexp.QuoteMeta(input)
 	reg, _ := regexp.Compile(fmt.Sprintf("^(%s)+.*", escaped))
 	matches := a.registry.MatchAll(reg)
@@ -70,7 +70,7 @@ func (a *AutocompletePlugin) complete(input string) (string, bool) {
 	return "", false
 }
 
-func (a *AutocompletePlugin) ringTheBell() bool {
+func (a *Autocomplete) ringTheBell() bool {
 	if a.bellRung {
 		return false
 	}
@@ -80,7 +80,7 @@ func (a *AutocompletePlugin) ringTheBell() bool {
 	return true
 }
 
-func (a *AutocompletePlugin) printPossibleCompletions(completions []string) {
+func (a *Autocomplete) printPossibleCompletions(completions []string) {
 	a.tr.Writer().StagePushForegroundColor(terminal.Cyan).
 		Stagef("\n%s\n", strings.Join(completions, "  ")).
 		StagePopForegroundColor()
@@ -90,7 +90,7 @@ func (a *AutocompletePlugin) printPossibleCompletions(completions []string) {
 // MatchFirst tries to complete the input and
 // returns the first match it finds. It does not
 // ring the bell or check any possible completions.
-func (a *AutocompletePlugin) MatchFirst(input string) (string, bool) {
+func (a *Autocomplete) MatchFirst(input string) (string, bool) {
 	escaped := regexp.QuoteMeta(input)
 	reg, _ := regexp.Compile(fmt.Sprintf("^(%s)+.*", escaped))
 	matches := a.registry.MatchAll(reg)
