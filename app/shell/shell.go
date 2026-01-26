@@ -146,7 +146,11 @@ func (s *Shell) Run() error {
 		p.Register(s)
 	}
 
+	s.runHooks(HookInitialized)
+
 	s.repl()
+
+	s.runHooks(HookPreExit)
 	return nil
 }
 
@@ -187,7 +191,7 @@ func (s *Shell) repl() {
 }
 
 func (s *Shell) read() (string, error) {
-	s.hooks.runPreReadHooks()
+	s.hooks.runHooks(HookPreRead)
 
 	for {
 		item := s.tr.NextItem()

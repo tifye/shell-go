@@ -24,7 +24,7 @@ func (h *NavHistoryPlugin) Name() string {
 }
 
 func (h *NavHistoryPlugin) Register(s *shell.Shell) {
-	s.AddPreReadHook(h.onPreRead)
+	s.AddHook(shell.HookPreRead, h.onPreRead)
 	s.KeyHandlers().Use(terminal.ItemKeyUp, h.handleItemUp)
 	s.KeyHandlers().Use(terminal.ItemKeyDown, h.handleItemDown)
 
