@@ -175,6 +175,7 @@ func (s *Shell) repl() {
 		s.HistoryContext.Add(input)
 
 		s.tw.StagePushForegroundColor(terminal.OffWhiteWarm)
+		s.runHooks(HookPreEvaluate)
 		if err = s.interp.Evaluate(input); err != nil {
 			if errors.Is(err, ErrExit) {
 				return
@@ -186,6 +187,7 @@ func (s *Shell) repl() {
 				fmt.Fprintf(s.Stderr, "error: %s\n", err)
 			}
 		}
+		s.runHooks(HookPostEvaluate)
 		s.tw.StagePopForegroundColor()
 	}
 }

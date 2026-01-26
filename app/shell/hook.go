@@ -9,7 +9,9 @@ const (
 	HookPreExit Hook = "PreExit"
 	// HookInitialized runs after the shell is initialized but before
 	// it begins its Read Print Eval loop
-	HookInitialized Hook = "Initialized"
+	HookInitialized  Hook = "Initialized"
+	HookPreEvaluate  Hook = "PreEvaluate"
+	HookPostEvaluate Hook = "PostEvaluate"
 )
 
 type HookFunc func()
