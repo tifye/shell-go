@@ -20,15 +20,17 @@ func _() {
 	_ = x[tokenPipeline-9]
 	_ = x[tokenAmpersand-10]
 	_ = x[tokenVariable-11]
+	_ = x[tokenSemicolon-12]
 }
 
-const _tokenType_name = "ErrorEOFSpaceTextSingleQuoteDoubleQuoteEscapedRedirectAppendPipelineAmpersandVariable"
+const _tokenType_name = "ErrorEOFSpaceTextSingleQuoteDoubleQuoteEscapedRedirectAppendPipelineAmpersandVariableSemicolon"
 
-var _tokenType_index = [...]uint8{0, 5, 8, 13, 17, 28, 39, 46, 54, 60, 68, 77, 85}
+var _tokenType_index = [...]uint8{0, 5, 8, 13, 17, 28, 39, 46, 54, 60, 68, 77, 85, 94}
 
 func (i tokenType) String() string {
-	if i < 0 || i >= tokenType(len(_tokenType_index)-1) {
+	idx := int(i) - 0
+	if i < 0 || idx >= len(_tokenType_index)-1 {
 		return "tokenType(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
-	return _tokenType_name[_tokenType_index[i]:_tokenType_index[i+1]]
+	return _tokenType_name[_tokenType_index[idx]:_tokenType_index[idx+1]]
 }
