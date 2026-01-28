@@ -1,7 +1,9 @@
 package plugin
 
 import (
+	"errors"
 	"fmt"
+	"reflect"
 
 	"github.com/codecrafters-io/shell-starter-go/app/shell"
 	"github.com/codecrafters-io/shell-starter-go/app/shell/terminal"
@@ -67,14 +69,8 @@ func (l *LuaPlugin) AddHook(lstate *lua.LState) int {
 	lfunc := lstate.ToFunction(2)
 
 	l.s.AddHook(shell.Hook(lhook), func() {
-		err := lstate.CallByParam(lua.P{
-			Fn:      lfunc,
-			NRet:    0,
-			Protect: true,
-		})
-		if err != nil {
+		if _, err := luaCall[*lua.LNilType](lstate, lfunc); err != nil {
 			l.s.Error(err.Error())
-			return
 		}
 	})
 
@@ -85,19 +81,12 @@ func (l *LuaPlugin) SetPromptStringFunc(lstate *lua.LState) int {
 	lfunc := lstate.ToFunction(1)
 
 	l.s.Terminal().PromptStringFunc = func() string {
-		err := lstate.CallByParam(lua.P{
-			Fn:      lfunc,
-			NRet:    1,
-			Protect: true,
-		})
+		val, err := luaCall[lua.LString](lstate, lfunc)
 		if err != nil {
 			l.s.Error(err.Error())
 			return ""
 		}
-
-		val := lstate.Get(-1)
-		defer lstate.Pop(1)
-		return lua.LVAsString(val)
+		return val.String()
 	}
 	return 0
 }
@@ -131,4 +120,39 @@ func (l *LuaPlugin) StageString(lstate *lua.LState) int {
 	lstr := lstate.ToString(1)
 	l.tw.StageString(lstr)
 	return 0
+}
+
+func luaCall[R lua.LValue](lstate *lua.LState, lfunc *lua.LFunction, args ...lua.LValue) (R, error) {
+	numRet := 0
+	var aux R
+	switch any(aux).(type) {
+	case lua.LString, lua.LNumber, lua.LBool, lua.LFunction,
+		lua.LChannel, lua.LTable, lua.LState, lua.LUserData:
+		numRet = 1
+	case *lua.LNilType:
+	default:
+		return aux, errors.New("invalid lua type for return")
+	}
+
+	err := lstate.CallByParam(lua.P{
+		Fn:      lfunc,
+		NRet:    numRet,
+		Protect: true,
+	}, args...)
+	if err != nil {
+		return aux, err
+	}
+
+	if numRet == 0 {
+		return aux, err
+	}
+
+	ret := lstate.Get(-1)
+	defer lstate.Pop(1)
+
+	if retVal, ok := ret.(R); ok {
+		return retVal, nil
+	} else {
+		return aux, fmt.Errorf("expected return type of %q but got %q", reflect.TypeOf(aux).String(), reflect.TypeOf(ret).String())
+	}
 }
