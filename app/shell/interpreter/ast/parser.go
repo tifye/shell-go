@@ -205,21 +205,44 @@ func (p *Parser) parseArgsList() (a *ArgsList) {
 	a = &ArgsList{
 		Args: make([]Expression, 0),
 	}
+
+	adjecentExprs := make([]Expression, 0)
+	collect := func() {
+		switch {
+		case len(adjecentExprs) == 0:
+			return
+		case len(adjecentExprs) == 1:
+			a.Args = append(a.Args, adjecentExprs[0])
+		case len(adjecentExprs) > 1:
+			a.Args = append(a.Args, &MultiTextExpr{
+				Expressions: adjecentExprs,
+			})
+		}
+		adjecentExprs = make([]Expression, 0)
+	}
 	for {
 		switch p.curToken.typ {
-		case tokenText, tokenSpace, tokenEscaped:
+		case tokenText, tokenEscaped:
 			if s := p.parseText(); s.Literal != "" {
-				a.Args = append(a.Args, s)
+				adjecentExprs = append(adjecentExprs, s)
+				// a.Args = append(a.Args, s)
 			}
 		case tokenSingleQuote:
 			if s := p.parseSingleQuotes(); s.Literal != "" {
-				a.Args = append(a.Args, s)
+				adjecentExprs = append(adjecentExprs, s)
+				// a.Args = append(a.Args, s)
 			}
 		case tokenDoubleQuote:
-			a.Args = append(a.Args, p.parseDoubleQuotes())
+			adjecentExprs = append(adjecentExprs, p.parseDoubleQuotes())
+			// a.Args = append(a.Args, p.parseDoubleQuotes())
 		case tokenVariable:
-			a.Args = append(a.Args, p.parseVariable())
+			adjecentExprs = append(adjecentExprs, p.parseVariable())
+			// a.Args = append(a.Args, p.parseVariable())
+		case tokenSpace:
+			collect()
+			p.nextToken()
 		default:
+			collect()
 			return
 		}
 	}
@@ -260,9 +283,11 @@ func (p *Parser) parseText() *RawTextExpr {
 	for {
 		switch p.curToken.typ {
 		case tokenSpace:
-			p.nextToken()
+			// p.nextToken()
 			if len(str) > 0 {
 				return &RawTextExpr{Literal: str}
+			} else {
+				p.nextToken()
 			}
 		case tokenText:
 			str += strings.TrimPrefix(p.curToken.literal, `\`)
@@ -369,7 +394,7 @@ func (p *Parser) parseRedirect() *RedirectStmt {
 	var filename Expression
 
 	switch p.peekToken.typ {
-	case tokenText, tokenSpace, tokenEscaped:
+	case tokenText, tokenEscaped:
 		filename = p.parseText()
 	case tokenSingleQuote:
 		filename = p.parseSingleQuotes()
@@ -397,7 +422,7 @@ func (p *Parser) parseAppend() *AppendStmt {
 	var filename Expression
 
 	switch p.peekToken.typ {
-	case tokenText, tokenSpace, tokenEscaped:
+	case tokenText, tokenEscaped:
 		filename = p.parseText()
 	case tokenSingleQuote:
 		filename = p.parseSingleQuotes()

@@ -60,6 +60,10 @@ type (
 		Literal  string
 	}
 
+	MultiTextExpr struct {
+		Expressions []Expression
+	}
+
 	RawTextExpr struct {
 		ValuePos int
 		Literal  string
@@ -89,6 +93,7 @@ func (x *ArgsList) Pos() int {
 func (x *RedirectStmt) Pos() int         { return x.RedirectPos }
 func (x *AppendStmt) Pos() int           { return x.AppendPos }
 func (x *VariableExpr) Pos() int         { return x.ValuePos }
+func (x *MultiTextExpr) Pos() int        { return x.Expressions[0].Pos() }
 func (x *RawTextExpr) Pos() int          { return x.ValuePos }
 func (x *SingleQuotedTextExpr) Pos() int { return x.ValuePos }
 func (x *DoubleQuotedTextExpr) Pos() int { return x.StartQuote }
@@ -113,6 +118,7 @@ func (x *ArgsList) End() int {
 func (x *RedirectStmt) End() int         { return x.Filename.End() }
 func (x *AppendStmt) End() int           { return x.Filename.End() }
 func (x *VariableExpr) End() int         { return x.ValuePos + utf8.RuneCountInString(x.Literal) }
+func (x *MultiTextExpr) End() int        { return x.Expressions[len(x.Expressions)-1].End() }
 func (x *RawTextExpr) End() int          { return x.ValuePos }
 func (x *SingleQuotedTextExpr) End() int { return x.ValuePos }
 func (x *DoubleQuotedTextExpr) End() int { return x.StartQuote }
@@ -124,6 +130,7 @@ func (*AppendStmt) stmtNode()     {}
 func (*RedirectStmt) stmtNode()   {}
 func (*BackgroundStmt) stmtNode() {}
 
+func (*MultiTextExpr) exprNode()        {}
 func (*VariableExpr) exprNode()         {}
 func (*RawTextExpr) exprNode()          {}
 func (*SingleQuotedTextExpr) exprNode() {}

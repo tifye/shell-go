@@ -262,6 +262,19 @@ func (p *Interpreter) evalExpression(expr ast.Expression) (string, error) {
 		return n.Literal, nil
 	case *ast.SingleQuotedTextExpr:
 		return n.Literal, nil
+	case *ast.MultiTextExpr:
+		b := strings.Builder{}
+		for _, e := range n.Expressions {
+			s, err := p.evalExpression(e)
+			if err != nil {
+				return "", fmt.Errorf("eval multi text expr: %w", err)
+			}
+
+			if _, err := b.WriteString(s); err != nil {
+				return "", fmt.Errorf("failed to write to string builder: %s", err)
+			}
+		}
+		return b.String(), nil
 	case *ast.DoubleQuotedTextExpr:
 		b := strings.Builder{}
 		for _, e := range n.Expressions {
