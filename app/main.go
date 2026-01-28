@@ -44,10 +44,12 @@ func run() {
 		plugin.NewNavHistory(),
 		plugin.NewClearScreen(),
 		plugin.ControlCExit{},
-		plugin.NewLuaPluginLoader(".plugins"),
 	)
 	if os.Getenv("ENV") != "CODECRAFTERS" {
-		s.WithPlugins(plugin.NewCompletionHints())
+		s.WithPlugins(
+			plugin.NewCompletionHints(),
+			plugin.NewLuaPluginLoader(".plugins"),
+		)
 	}
 
 	if err := s.Run(); err != nil {
